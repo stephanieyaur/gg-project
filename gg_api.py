@@ -1,4 +1,6 @@
 '''Version 0.35'''
+from tkinter.tix import TCL_WINDOW_EVENTS
+from unicodedata import name
 from GoldenGlobe import GoldenGlobe
 
 import json
@@ -27,6 +29,15 @@ def get_nominees(year):
     names as keys, and each entry a list of strings. Do NOT change
     the name of this function or what it returns.'''
     # Your code here
+
+    for all tweets:
+        split tweet
+        if "nominated" or "nominee" in split_tweet:
+        find actor name
+        find award name
+
+        add actor name to Award.nominees
+
     return nominees
 
 def get_winner(year):
