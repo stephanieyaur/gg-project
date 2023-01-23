@@ -1,7 +1,10 @@
 '''Version 0.35'''
 from tkinter.tix import TCL_WINDOW_EVENTS
 from unicodedata import name
+
+from Award import Award
 from GoldenGlobe import GoldenGlobe
+from preliminary_helpers import populate_awards_nominees
 
 import json
 
@@ -30,6 +33,7 @@ def get_nominees(year):
     the name of this function or what it returns.'''
     # Your code here
 
+    """
     for all tweets:
         split tweet
         if "nominated" or "nominee" in split_tweet:
@@ -39,6 +43,7 @@ def get_nominees(year):
         add actor name to Award.nominees
 
     return nominees
+    """
 
 def get_winner(year):
     '''Winners is a dictionary with the hard coded award
@@ -61,6 +66,7 @@ def pre_ceremony():
     Do NOT change the name of this function or what it returns.'''
     # Your code here
     f = open('gg2013.json')
+    global data
     data = json.load(f)
     print("Pre-ceremony processing complete.")
     return
@@ -72,7 +78,10 @@ def main():
     run when grading. Do NOT change the name of this function or
     what it returns.'''
     # Your code here
-    pre_ceremony()
+    # pre_ceremony()
+    # get award and nominees within GoldenGlobes object
+    global gg
+    gg = populate_awards_nominees(gg)
     return
 
 if __name__ == '__main__':

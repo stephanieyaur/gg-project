@@ -1,6 +1,7 @@
 #  type constrain functions
 
 def is_actor(text):
+    """
     word_list = text.split(" ")
     
     # if either word is lwoercase, its not an actor
@@ -13,8 +14,10 @@ def is_actor(text):
             return False
 
         return True
+    """
 
 def is_award(text):
+    """
     word_list = text.split(" ")
 
     for word in word_list:
@@ -25,7 +28,7 @@ def is_award(text):
         return True
     if word_list[1] is an attribute or role:
         return True
-    
+    """
 
     
         
