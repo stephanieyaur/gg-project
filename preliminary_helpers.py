@@ -10,5 +10,6 @@ def populate_awards_nominees(gg):
         award = answersDictionary["award_data"][award_name]
         for n in award["nominees"]:
             newAward.nominees.append(n)
+        newAward.nominees.append(award["winner"])
         gg.awards.append(newAward)
     return gg
