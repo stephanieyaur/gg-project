@@ -5,6 +5,7 @@ from unicodedata import name
 from Award import Award
 from GoldenGlobe import GoldenGlobe
 from preliminary_helpers import populate_awards_nominees
+from string import punctuation
 
 import json
 
@@ -25,6 +26,46 @@ def get_awards(year):
     '''Awards is a list of strings. Do NOT change the name
     of this function or what it returns.'''
     # Your code here
+
+    # look for everything after "won" XX and before "goes to" - find the intersection
+    won_awards = set()
+    goes_to_awards = set()
+    for d in data:
+        tweet = d["text"]
+        split_tweet = tweet.lower().split()
+        try:
+            # look for won
+            won_index = split_tweet.index("won")
+            if split_tweet[won_index+1] == "best":
+                for i in range(won_index+2, len(split_tweet)):
+                    delimiter = " "
+                    won_awards.add(delimiter.join(split_tweet[won_index+1: i+1]).strip(punctuation))
+            # look for goes to
+            if "Kate" in tweet:
+                x = "hoi"
+            goes_index = split_tweet.index("goes")
+            to_index = split_tweet[goes_index:].index("to")
+            if to_index == 1:
+                for i in range(0, goes_index):
+                    delimiter = " "
+                    goes_to_awards.add(delimiter.join(split_tweet[i: goes_index]).strip(punctuation))
+        except:
+            try:
+                # look for goes to
+                if "Kate" in tweet:
+                    x = "hoi"
+                goes_index = split_tweet.index("goes")
+                to_index = split_tweet[goes_index:].index("to")
+                if to_index == 1:
+                    for i in range(0, goes_index):
+                        delimiter = " "
+                        goes_to_awards.add(delimiter.join(split_tweet[i: goes_index]).strip(punctuation))
+            except:
+                continue
+    awards = goes_to_awards.copy()
+    for a in goes_to_awards:
+        if a not in won_awards:
+            awards.remove(a)
     return awards
 
 def get_nominees(year):
@@ -78,10 +119,12 @@ def main():
     run when grading. Do NOT change the name of this function or
     what it returns.'''
     # Your code here
-    # pre_ceremony()
-    # get award and nominees within GoldenGlobes object
-    global gg
-    gg = populate_awards_nominees(gg)
+    pre_ceremony()
+    # # get award and nominees within GoldenGlobes object
+    # global gg
+    # gg = populate_awards_nominees(gg)
+    # get awards
+    get_awards(2013)
     return
 
 if __name__ == '__main__':
