@@ -1,4 +1,5 @@
 '''Version 0.35'''
+import time
 from tkinter.tix import TCL_WINDOW_EVENTS
 from unicodedata import name
 
@@ -11,6 +12,8 @@ import json
 import re
 import nltk
 import numpy
+import spacy
+
 # nltk.download('punkt')
 # nltk.download('averaged_perceptron_tagger')
 # nltk.download('maxent_ne_chunker')
@@ -29,6 +32,17 @@ def get_hosts(year):
     '''Hosts is a list of one or more strings. Do NOT change the name
     of this function or what it returns.'''
     # Your code here
+    hosts = set()
+    english_nlp = spacy.load('en_core_web_sm')
+    for d in data:
+        tweet = d["text"]
+        spacy_parser = english_nlp(tweet)
+        for entity in spacy_parser.ents:
+            # print(f'Found: {entity.text} of type: {entity.label_}')
+            if entity.label_ == 'PERSON':
+                hosts.add(entity.text)
+
+
     return hosts
 
 def get_awards(year):
@@ -170,11 +184,12 @@ def main():
     pre_ceremony()
     # # get award and nominees within GoldenGlobes object
     global gg
-    gg = populate_awards_nominees(gg)
+    # gg = populate_awards_nominees(gg)
     # get awards
     # get_awards(2013)
-    get_winner(2013)
-
+    # get_winner(2013)
+    # get_nominees(2013)
+    get_hosts(2013)
     return
 
 if __name__ == '__main__':
