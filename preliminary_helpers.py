@@ -13,3 +13,13 @@ def populate_awards_nominees(gg):
         newAward.nominees.append(award["winner"])
         gg.awards.append(newAward)
     return gg
+
+# Initialize winner dictionary for get_winners
+# Returns a dictionary of actual awards as keys and empty string as values
+def populate_awards():
+    d = {}
+    f = open('gg2013answers.json')
+    answersDictionary = json.load(f)
+    for award_name in answersDictionary["award_data"]:
+        d[award_name] = 0
+    return d

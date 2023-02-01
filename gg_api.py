@@ -5,7 +5,7 @@ from unicodedata import name
 
 from Award import Award
 from GoldenGlobe import GoldenGlobe
-from preliminary_helpers import populate_awards_nominees
+from preliminary_helpers import populate_awards
 from string import punctuation
 
 import json
@@ -157,6 +157,10 @@ def get_winner(year):
     names as keys, and each entry containing a single string.
     Do NOT change the name of this function or what it returns.'''
     # Your code here
+
+    winners = populate_awards()
+    # TODO @Max: given all the awards (keys of "winners" are awards, value should be the winner), find all the winners WITHOUT knowing the nominees
+    # Reference get_hosts for how to use nltk and keeping a voting system of potential winners. Only use nltk on tweets that pass the regex checks BUT nltk only works on the non-lowercase tweets, so make sure you use the regex checks on lower_tweets[i] and then if that passes, then use nltk on data[i]
     
     global gg
     for award in gg.awards:
@@ -183,8 +187,7 @@ def get_winner(year):
         award.winners.append(winner)
         #print(winner_dict)
         print(winner + " won " + award.award_name)
-        
-    winners = {}
+
     return winners
 
 def get_presenters(year):
