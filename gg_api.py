@@ -20,29 +20,55 @@ import spacy
 # nltk.download('words')
 from nltk import ne_chunk, pos_tag, word_tokenize
 from nltk.tree import Tree
+from collections import defaultdict
 
 OFFICIAL_AWARDS_1315 = ['cecil b. demille award', 'best motion picture - drama', 'best performance by an actress in a motion picture - drama', 'best performance by an actor in a motion picture - drama', 'best motion picture - comedy or musical', 'best performance by an actress in a motion picture - comedy or musical', 'best performance by an actor in a motion picture - comedy or musical', 'best animated feature film', 'best foreign language film', 'best performance by an actress in a supporting role in a motion picture', 'best performance by an actor in a supporting role in a motion picture', 'best director - motion picture', 'best screenplay - motion picture', 'best original score - motion picture', 'best original song - motion picture', 'best television series - drama', 'best performance by an actress in a television series - drama', 'best performance by an actor in a television series - drama', 'best television series - comedy or musical', 'best performance by an actress in a television series - comedy or musical', 'best performance by an actor in a television series - comedy or musical', 'best mini-series or motion picture made for television', 'best performance by an actress in a mini-series or motion picture made for television', 'best performance by an actor in a mini-series or motion picture made for television', 'best performance by an actress in a supporting role in a series, mini-series or motion picture made for television', 'best performance by an actor in a supporting role in a series, mini-series or motion picture made for television']
 OFFICIAL_AWARDS_1819 = ['best motion picture - drama', 'best motion picture - musical or comedy', 'best performance by an actress in a motion picture - drama', 'best performance by an actor in a motion picture - drama', 'best performance by an actress in a motion picture - musical or comedy', 'best performance by an actor in a motion picture - musical or comedy', 'best performance by an actress in a supporting role in any motion picture', 'best performance by an actor in a supporting role in any motion picture', 'best director - motion picture', 'best screenplay - motion picture', 'best motion picture - animated', 'best motion picture - foreign language', 'best original score - motion picture', 'best original song - motion picture', 'best television series - drama', 'best television series - musical or comedy', 'best television limited series or motion picture made for television', 'best performance by an actress in a limited series or a motion picture made for television', 'best performance by an actor in a limited series or a motion picture made for television', 'best performance by an actress in a television series - drama', 'best performance by an actor in a television series - drama', 'best performance by an actress in a television series - musical or comedy', 'best performance by an actor in a television series - musical or comedy', 'best performance by an actress in a supporting role in a series, limited series or motion picture made for television', 'best performance by an actor in a supporting role in a series, limited series or motion picture made for television', 'cecil b. demille award']
 
 # variables
 data = None
+lower_tweets = None
+split_tweets = None
 gg = GoldenGlobe()
 
 def get_hosts(year):
     '''Hosts is a list of one or more strings. Do NOT change the name
     of this function or what it returns.'''
     # Your code here
-    hosts = set()
-    english_nlp = spacy.load('en_core_web_sm')
-    for d in data:
-        tweet = d["text"]
-        spacy_parser = english_nlp(tweet)
-        for entity in spacy_parser.ents:
-            # print(f'Found: {entity.text} of type: {entity.label_}')
-            if entity.label_ == 'PERSON':
-                hosts.add(entity.text)
-
-
+    hosts = []
+    potential_hosts = defaultdict(int)
+    # english_nlp = spacy.load('en_core_web_sm')
+    # Only look for tweets that mention "host"
+    for i in range(len(data)):
+        try:
+            host_index = split_tweets[i].index("host")
+            nltk_results = ne_chunk(pos_tag(word_tokenize(data[i])))
+            for nltk_result in nltk_results:
+                if type(nltk_result) == Tree:
+                    name = ''
+                    for nltk_result_leaf in nltk_result.leaves():
+                        name += nltk_result_leaf[0] + ' '
+                    if nltk_result.label() == "PERSON":
+                        potential_hosts[name] += 1
+        except:
+            continue
+    # get 2 actors with highest votes
+    host1 = None
+    host2 = None
+    for h in potential_hosts:
+        if not host1:
+            host1 = h
+        elif not host2:
+            host2 = h
+        else:
+            if potential_hosts[h] > potential_hosts[host1] or potential_hosts[h] > potential_hosts[host2]:
+                # TODO: check h against imdb before doing any updating
+                # this potential host needs to be added. check if need to remove host1 or host2
+                if potential_hosts[host1] < potential_hosts[host2]:
+                    host1 = host2
+                host2 = h
+    hosts.append(host1)
+    hosts.append(host2)
     return hosts
 
 def get_awards(year):
@@ -53,9 +79,8 @@ def get_awards(year):
     # look for everything after "won" XX and before "goes to" - find the intersection
     won_awards = set()
     goes_to_awards = set()
-    for d in data:
-        tweet = d["text"]
-        split_tweet = tweet.lower().split()
+    for tweet in data:
+        split_tweet = tweet.split()
         try:
             # look for won
             won_index = split_tweet.index("won")
@@ -109,7 +134,7 @@ def get_nominees(year):
     return nominees
     """
     for tweet in data:
-        nltk_results = ne_chunk(pos_tag(word_tokenize(tweet["text"])))
+        nltk_results = ne_chunk(pos_tag(word_tokenize(tweet)))
         for nltk_result in nltk_results:
             if type(nltk_result) == Tree:
                 name = ''
@@ -131,12 +156,11 @@ def get_winner(year):
         for nominee in award.nominees:
             winner_dict[nominee] = 0
         
-            for tweet in data:
-                text = tweet["text"].lower()
+            for i in range(len(data)):
                 # expand thi
                 #form1 = nominee.lower() + " won " + award.award_name.lower()
-                if re.search(nominee.lower(),text):
-                    if re.search("(won|wins|goes to|)",text) or re.search(award.award_name.lower().split(),text):
+                if re.search(nominee.lower(),lower_tweets[i]):
+                    if re.search("(won|wins|goes to|)",lower_tweets[i]) or re.search(award.award_name.lower(),lower_tweets):
                         winner_dict[nominee] += 1 
         
         #print(winner_dict)
@@ -170,7 +194,17 @@ def pre_ceremony():
     # Your code here
     f = open('gg2013.json')
     global data
-    data = json.load(f)
+    global split_tweets
+    global lower_tweets
+    loaded_data = json.load(f)
+    data = [None for i in range(len(loaded_data))]
+    lower_tweets = [None for i in range(len(loaded_data))]
+    split_tweets = [None for i in range(len(loaded_data))]
+    # Clean each tweet so only keep the "data" field and make it all lowercase
+    for i in range(len(loaded_data)):
+        data[i] = loaded_data[i]["text"]
+        lower_tweets[i] = data[i].lower()
+        split_tweets[i] = lower_tweets[i].split()
     print("Pre-ceremony processing complete.")
     return
 
@@ -189,7 +223,10 @@ def main():
     # get_awards(2013)
     # get_winner(2013)
     # get_nominees(2013)
+    time1 = time.time()
     get_hosts(2013)
+    time2 = time.time()
+    print("get_hosts using nltk elapsed time: " + str(time2-time1))
     return
 
 if __name__ == '__main__':
