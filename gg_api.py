@@ -37,11 +37,12 @@ def get_hosts(year):
     # Your code here
     hosts = []
     potential_hosts = defaultdict(int)
-    # english_nlp = spacy.load('en_core_web_sm')
+    english_nlp = spacy.load('en_core_web_sm')
     # Only look for tweets that mention "host"
     for i in range(len(data)):
         try:
             host_index = split_tweets[i].index("host")
+            # METHOD 1 (faster - 7.113235712051392s): NLTK
             nltk_results = ne_chunk(pos_tag(word_tokenize(data[i])))
             for nltk_result in nltk_results:
                 if type(nltk_result) == Tree:
@@ -50,6 +51,13 @@ def get_hosts(year):
                         name += nltk_result_leaf[0] + ' '
                     if nltk_result.label() == "PERSON":
                         potential_hosts[name] += 1
+
+            # Method 2(slower - 9.111426830291748s): SPACY
+            # spacy_parser = english_nlp(data[i])
+            # for entity in spacy_parser.ents:
+            #     if entity.label_=="PERSON":
+            #         potential_hosts[entity.text] += 1
+
         except:
             continue
     # get 2 actors with highest votes
