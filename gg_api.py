@@ -13,6 +13,8 @@ import re
 import nltk
 import numpy
 import spacy
+import pandas as pd
+import pymongo
 
 # nltk.download('punkt')
 # nltk.download('averaged_perceptron_tagger')
@@ -30,6 +32,19 @@ data = None
 lower_tweets = None
 split_tweets = None
 gg = GoldenGlobe()
+
+# Connects to mongodb database with uploaded imdb actors dataset
+client = pymongo.MongoClient("mongodb+srv://mry2745:nlplab1pw@cluster0.tmoqg.mongodb.net/test")
+db = client["test"] # database name: imdb
+collection = db["co"] # collection name: actor
+
+def is_actor(input):
+    # Queries mongodb database to see if the input string is an actor in the imdb dataset
+    result = list(collection.find({"col 1": {"$in": ["a"]}})) # change to primary name
+    print(len(result) > 0)
+    result = list(collection.find({"col 1": {"$in": ["wrong"]}})) # change to primary name
+    print(len(result) > 0)
+
 
 def get_hosts(year):
     '''Hosts is a list of one or more strings. Do NOT change the name
@@ -238,6 +253,7 @@ def main():
     get_hosts(2013)
     time2 = time.time()
     print("get_hosts using nltk elapsed time: " + str(time2-time1))
+    # is_actor("random")
     return
 
 if __name__ == '__main__':
