@@ -35,15 +35,15 @@ gg = GoldenGlobe()
 
 # Connects to mongodb database with uploaded imdb actors dataset
 client = pymongo.MongoClient("mongodb+srv://mry2745:nlplab1pw@cluster0.tmoqg.mongodb.net/test")
-db = client["test"] # database name: imdb
-collection = db["co"] # collection name: actor
+db = client["imdb"] # database name: imdb
+collection = db["actors"] # collection name: actors
 
 def is_actor(input):
     # Queries mongodb database to see if the input string is an actor in the imdb dataset
-    result = list(collection.find({"col 1": {"$in": ["a"]}})) # change to primary name
+    result = list(collection.find({"primaryName": {"$in": [input]}})) # change to primary name
     print(len(result) > 0)
-    result = list(collection.find({"col 1": {"$in": ["wrong"]}})) # change to primary name
-    print(len(result) > 0)
+    result2 = list(collection.find({"primaryName": {"$in": ["not an actor"]}})) # change to primary name
+    print(len(result2) > 0)
 
 
 def get_hosts(year):
@@ -250,10 +250,10 @@ def main():
     # get_winner(2013)
     # get_nominees(2013)
     time1 = time.time()
-    get_hosts(2013)
+    # get_hosts(2013)
     time2 = time.time()
     print("get_hosts using nltk elapsed time: " + str(time2-time1))
-    # is_actor("random")
+    is_actor("jennifer lawrence")
     return
 
 if __name__ == '__main__':
