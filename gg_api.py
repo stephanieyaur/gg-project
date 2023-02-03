@@ -20,9 +20,12 @@ import pymongo
 # nltk.download('averaged_perceptron_tagger')
 # nltk.download('maxent_ne_chunker')
 # nltk.download('words')
-from nltk import ne_chunk, pos_tag, word_tokenize
+#nltk.download('vader_lexicon')
+from nltk import ne_chunk, pos_tag, word_tokenize, sentiment
 from nltk.tree import Tree
 from collections import defaultdict
+
+from type_constraints import is_actor
 
 OFFICIAL_AWARDS_1315 = ['cecil b. demille award', 'best motion picture - drama', 'best performance by an actress in a motion picture - drama', 'best performance by an actor in a motion picture - drama', 'best motion picture - comedy or musical', 'best performance by an actress in a motion picture - comedy or musical', 'best performance by an actor in a motion picture - comedy or musical', 'best animated feature film', 'best foreign language film', 'best performance by an actress in a supporting role in a motion picture', 'best performance by an actor in a supporting role in a motion picture', 'best director - motion picture', 'best screenplay - motion picture', 'best original score - motion picture', 'best original song - motion picture', 'best television series - drama', 'best performance by an actress in a television series - drama', 'best performance by an actor in a television series - drama', 'best television series - comedy or musical', 'best performance by an actress in a television series - comedy or musical', 'best performance by an actor in a television series - comedy or musical', 'best mini-series or motion picture made for television', 'best performance by an actress in a mini-series or motion picture made for television', 'best performance by an actor in a mini-series or motion picture made for television', 'best performance by an actress in a supporting role in a series, mini-series or motion picture made for television', 'best performance by an actor in a supporting role in a series, mini-series or motion picture made for television']
 OFFICIAL_AWARDS_1819 = ['best motion picture - drama', 'best motion picture - musical or comedy', 'best performance by an actress in a motion picture - drama', 'best performance by an actor in a motion picture - drama', 'best performance by an actress in a motion picture - musical or comedy', 'best performance by an actor in a motion picture - musical or comedy', 'best performance by an actress in a supporting role in any motion picture', 'best performance by an actor in a supporting role in any motion picture', 'best director - motion picture', 'best screenplay - motion picture', 'best motion picture - animated', 'best motion picture - foreign language', 'best original score - motion picture', 'best original song - motion picture', 'best television series - drama', 'best television series - musical or comedy', 'best television limited series or motion picture made for television', 'best performance by an actress in a limited series or a motion picture made for television', 'best performance by an actor in a limited series or a motion picture made for television', 'best performance by an actress in a television series - drama', 'best performance by an actor in a television series - drama', 'best performance by an actress in a television series - musical or comedy', 'best performance by an actor in a television series - musical or comedy', 'best performance by an actress in a supporting role in a series, limited series or motion picture made for television', 'best performance by an actor in a supporting role in a series, limited series or motion picture made for television', 'cecil b. demille award']
@@ -40,6 +43,8 @@ collection = db["actors"] # collection name: actors
 
 def is_actor(input):
     # Queries mongodb database to see if the input string is an actor in the imdb dataset
+
+    ### TODO - return a value
     result = list(collection.find({"primaryName": {"$in": [input]}})) # change to primary name
     print(len(result) > 0)
     result2 = list(collection.find({"primaryName": {"$in": ["not an actor"]}})) # change to primary name
@@ -177,32 +182,50 @@ def get_winner(year):
     # TODO @Max: given all the awards (keys of "winners" are awards, value should be the winner), find all the winners WITHOUT knowing the nominees
     # Reference get_hosts for how to use nltk and keeping a voting system of potential winners. Only use nltk on tweets that pass the regex checks BUT nltk only works on the non-lowercase tweets, so make sure you use the regex checks on lower_tweets[i] and then if that passes, then use nltk on data[i]
     
-    global gg
-    for award in gg.awards:
-        winner_dict = {}
-        for nominee in award.nominees:
-            winner_dict[nominee] = 0
-        
-            for i in range(len(data)):
-                # expand thi
-                #form1 = nominee.lower() + " won " + award.award_name.lower()
-                if re.search(nominee.lower(),lower_tweets[i]):
-                    if re.search("(won|wins|goes to|)",lower_tweets[i]) or re.search(award.award_name.lower(),lower_tweets):
-                        winner_dict[nominee] += 1 
-        
-        #print(winner_dict)
-        max_votes = 0
-        winner = ""
-        for nominee in winner_dict:
-            if winner_dict[nominee] > max_votes:
-                max_votes = winner_dict[nominee]
-                winner = nominee
-        
-        winner = ' '.join(word[0].upper() + word[1:] for word in winner.split())
-        award.winners.append(winner)
-        #print(winner_dict)
-        print(winner + " won " + award.award_name)
+    # global gg
+    # for award in gg.awards:
+    #     winner_dict = {}
+    #     for nominee in award.nominees:
+    #         winner_dict[nominee] = 0
+    potential_winners = defaultdict(int)
+    english_nlp = spacy.load('en_core_web_sm')
+    for award in winners:
+        award_short = ' '.join(award.split(' ')[0:2])
+        for tweet in data:
+            text = tweet.lower()
+            if re.search("(win|won|wins|goes to)",text) and re.search(award_short,text):
+                nltk_results = ne_chunk(pos_tag(word_tokenize(tweet)))
+                for nltk_result in nltk_results:
+                    if type(nltk_result) == Tree:
+                        name = ''
+                        for nltk_result_leaf in nltk_result.leaves():
+                            name += nltk_result_leaf[0] + ' '
+                        if nltk_result.label() == "PERSON" and not re.search("[Bb]est",name):# and is_actor(name):
+                            #print(name, " is a potential winner")
+                            try:
+                                potential_winners[name] += 1
+                            except:
+                                potential_winners[name] = 1
+        winners[award] = max(potential_winners)
+        potential_winners.clear()
+        #print(winners[award], " won ",award)
 
+                #if re.search("(won|wins|goes to|)",lower_tweets[i]) or re.search(award.award_name.lower(),lower_tweets):
+
+        
+    #     #print(winner_dict)
+    #     max_votes = 0
+    #     winner = ""
+    #     for nominee in winner_dict:
+    #         if winner_dict[nominee] > max_votes:
+    #             max_votes = winner_dict[nominee]
+    #             winner = nominee
+        
+        # winner = ' '.join(word[0].upper() + word[1:] for word in winner.split())
+        # award.winners.append(winner)
+        # #print(winner_dict)
+        # print(winner + " won " + award.award_name)
+    #print(winners)
     return winners
 
 def get_presenters(year):
@@ -247,7 +270,7 @@ def main():
     # gg = populate_awards_nominees(gg)
     # get awards
     # get_awards(2013)
-    # get_winner(2013)
+    get_winner(2013)
     # get_nominees(2013)
     time1 = time.time()
     # get_hosts(2013)
