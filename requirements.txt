@@ -1,4 +1,5 @@
 nltk==3.8.1
-spacy
 json
 re
+pandas
+pymongo

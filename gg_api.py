@@ -36,10 +36,12 @@ lower_tweets = None
 split_tweets = None
 gg = GoldenGlobe()
 
+"""
 # Connects to mongodb database with uploaded imdb actors dataset
 client = pymongo.MongoClient("mongodb+srv://mry2745:nlplab1pw@cluster0.tmoqg.mongodb.net/test")
 db = client["imdb"] # database name: imdb
 collection = db["actors"] # collection name: actors
+"""
 
 def is_actor(input):
     # Queries mongodb database to see if the input string is an actor in the imdb dataset
@@ -57,7 +59,6 @@ def get_hosts(year):
     # Your code here
     hosts = []
     potential_hosts = defaultdict(int)
-    english_nlp = spacy.load('en_core_web_sm')
     # Only look for tweets that mention "host"
     for i in range(len(data)):
         try:
@@ -107,8 +108,8 @@ def get_awards(year):
     # look for everything after "won" XX and before "goes to" - find the intersection
     won_awards = set()
     goes_to_awards = set()
-    for tweet in data:
-        split_tweet = tweet.split()
+    for i in range(len(data)):
+        split_tweet = split_tweets[i]
         try:
             # look for won
             won_index = split_tweet.index("won")
@@ -117,8 +118,6 @@ def get_awards(year):
                     delimiter = " "
                     won_awards.add(delimiter.join(split_tweet[won_index+1: i+1]).strip(punctuation))
             # look for goes to
-            if "Kate" in tweet:
-                x = "hoi"
             goes_index = split_tweet.index("goes")
             to_index = split_tweet[goes_index:].index("to")
             if to_index == 1:
@@ -128,8 +127,6 @@ def get_awards(year):
         except:
             try:
                 # look for goes to
-                if "Kate" in tweet:
-                    x = "hoi"
                 goes_index = split_tweet.index("goes")
                 to_index = split_tweet[goes_index:].index("to")
                 if to_index == 1:
@@ -187,45 +184,100 @@ def get_winner(year):
     #     winner_dict = {}
     #     for nominee in award.nominees:
     #         winner_dict[nominee] = 0
-    potential_winners = defaultdict(int)
-    english_nlp = spacy.load('en_core_web_sm')
     for award in winners:
+        isPerson = re.search(r"\bactor\b|\bactress\b", award) != None
+        potential_winners = defaultdict(int)
         award_short = ' '.join(award.split(' ')[0:2])
-        for tweet in data:
-            text = tweet.lower()
-            if re.search("(win|won|wins|goes to)",text) and re.search(award_short,text):
-                nltk_results = ne_chunk(pos_tag(word_tokenize(tweet)))
-                for nltk_result in nltk_results:
-                    if type(nltk_result) == Tree:
-                        name = ''
-                        for nltk_result_leaf in nltk_result.leaves():
-                            name += nltk_result_leaf[0] + ' '
-                        if nltk_result.label() == "PERSON" and not re.search("[Bb]est",name):# and is_actor(name):
-                            #print(name, " is a potential winner")
-                            try:
+        for i in range(len(data)):
+            tweet = data[i]
+            lower_tweet = lower_tweets[i]
+            winSearch = re.search(r"\bwon\b|\bwins\b",lower_tweet)
+            goesToSearch = re.search("goes to",lower_tweet)
+            if (winSearch or goesToSearch) and re.search(award_short,lower_tweet):
+                # look for actors using NLTK
+                if isPerson:
+                    nltk_results = ne_chunk(pos_tag(word_tokenize(tweet)))
+                    for nltk_result in nltk_results:
+                        if type(nltk_result) == Tree:
+                            name = ''
+                            for nltk_result_leaf in nltk_result.leaves():
+                                name += nltk_result_leaf[0] + ' '
+                            if nltk_result.label() == "PERSON" and not re.search("[Bb]est",name):# and is_actor(name):
+                                #print(name, " is a potential winner")
                                 potential_winners[name] += 1
+                # look for movies using similar strategy to get_awards
+                else:
+                    # get all capitalized things from sentence
+                    split_tweet_upper = data[i].split()
+                    split_tweet = split_tweets[i]
+                    if winSearch: #look at first half
+                        try:
+                            won_index = split_tweet.index("won")
+                            foundCapital = False
+                            endIndex = None
+                            for i in range(0, won_index):
+                                if foundCapital and not split_tweet_upper[i][0].isupper():
+                                    break
+                                if split_tweet_upper[i][0].isupper():
+                                    if foundCapital == False and type(foundCapital) != int:
+                                        foundCapital = i
+                                        endIndex = i
+                                    else:
+                                        endIndex = i
+                            if endIndex:
+                                delimiter = " "
+                                potential_winners[(delimiter.join(split_tweet_upper[foundCapital: endIndex+1]).strip(punctuation))] += 1
+                        except:
+                            try:
+                                wins_index = split_tweet.index("wins")
+                                foundCapital = False
+                                endIndex = None
+                                for i in range(0, wins_index):
+                                    if foundCapital and not split_tweet_upper[i][0].isupper():
+                                        break
+                                    if split_tweet_upper[i][0].isupper():
+                                        if foundCapital == False and type(foundCapital) != int:
+                                            foundCapital = i
+                                            endIndex = i
+                                        else:
+                                            endIndex = i
+                                if endIndex:
+                                    delimiter = " "
+                                    potential_winners[(
+                                        delimiter.join(split_tweet_upper[foundCapital: endIndex + 1]).strip(
+                                            punctuation))] += 1
                             except:
-                                potential_winners[name] = 1
-        winners[award] = max(potential_winners)
-        potential_winners.clear()
-        #print(winners[award], " won ",award)
+                                continue
+                    else:
+                        try:
+                            goes_index = split_tweet.index("goes")
+                            to_index = split_tweet[goes_index:].index("to")
+                            if to_index == 1:
+                                foundCapital = False
+                                endIndex = None
+                                for i in range(goes_index + 2, len(split_tweet_upper)):
+                                    if foundCapital and not split_tweet_upper[i][0].isupper():
+                                        break
+                                    if split_tweet_upper[i][0].isupper():
+                                        if foundCapital == False and type(foundCapital) != int:
+                                            foundCapital = i
+                                            endIndex = i
+                                        else:
+                                            endIndex = i
+                                if endIndex:
+                                    delimiter = " "
+                                    potential_winners[(delimiter.join(split_tweet_upper[foundCapital: endIndex+1]).strip(punctuation))] += 1
+                        except:
+                            continue
+        maxPW = None
+        for pw in potential_winners:
+            if not maxPW:
+                maxPW = pw
+            if potential_winners[maxPW] < potential_winners[pw]:
+                maxPW = pw
+        winners[award] = maxPW
+    #print(winners[award], " won ",award)
 
-                #if re.search("(won|wins|goes to|)",lower_tweets[i]) or re.search(award.award_name.lower(),lower_tweets):
-
-        
-    #     #print(winner_dict)
-    #     max_votes = 0
-    #     winner = ""
-    #     for nominee in winner_dict:
-    #         if winner_dict[nominee] > max_votes:
-    #             max_votes = winner_dict[nominee]
-    #             winner = nominee
-        
-        # winner = ' '.join(word[0].upper() + word[1:] for word in winner.split())
-        # award.winners.append(winner)
-        # #print(winner_dict)
-        # print(winner + " won " + award.award_name)
-    #print(winners)
     return winners
 
 def get_presenters(year):
@@ -272,10 +324,10 @@ def main():
     # get_awards(2013)
     get_winner(2013)
     # get_nominees(2013)
-    time1 = time.time()
+    # time1 = time.time()
     # get_hosts(2013)
-    time2 = time.time()
-    print("get_hosts using nltk elapsed time: " + str(time2-time1))
+    # time2 = time.time()
+    # print("get_hosts using nltk elapsed time: " + str(time2-time1))
     is_actor("jennifer lawrence")
     return
 
