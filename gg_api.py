@@ -25,8 +25,6 @@ from nltk import ne_chunk, pos_tag, word_tokenize, sentiment
 from nltk.tree import Tree
 from collections import defaultdict
 
-from type_constraints import is_actor
-
 OFFICIAL_AWARDS_1315 = ['cecil b. demille award', 'best motion picture - drama', 'best performance by an actress in a motion picture - drama', 'best performance by an actor in a motion picture - drama', 'best motion picture - comedy or musical', 'best performance by an actress in a motion picture - comedy or musical', 'best performance by an actor in a motion picture - comedy or musical', 'best animated feature film', 'best foreign language film', 'best performance by an actress in a supporting role in a motion picture', 'best performance by an actor in a supporting role in a motion picture', 'best director - motion picture', 'best screenplay - motion picture', 'best original score - motion picture', 'best original song - motion picture', 'best television series - drama', 'best performance by an actress in a television series - drama', 'best performance by an actor in a television series - drama', 'best television series - comedy or musical', 'best performance by an actress in a television series - comedy or musical', 'best performance by an actor in a television series - comedy or musical', 'best mini-series or motion picture made for television', 'best performance by an actress in a mini-series or motion picture made for television', 'best performance by an actor in a mini-series or motion picture made for television', 'best performance by an actress in a supporting role in a series, mini-series or motion picture made for television', 'best performance by an actor in a supporting role in a series, mini-series or motion picture made for television']
 OFFICIAL_AWARDS_1819 = ['best motion picture - drama', 'best motion picture - musical or comedy', 'best performance by an actress in a motion picture - drama', 'best performance by an actor in a motion picture - drama', 'best performance by an actress in a motion picture - musical or comedy', 'best performance by an actor in a motion picture - musical or comedy', 'best performance by an actress in a supporting role in any motion picture', 'best performance by an actor in a supporting role in any motion picture', 'best director - motion picture', 'best screenplay - motion picture', 'best motion picture - animated', 'best motion picture - foreign language', 'best original score - motion picture', 'best original song - motion picture', 'best television series - drama', 'best television series - musical or comedy', 'best television limited series or motion picture made for television', 'best performance by an actress in a limited series or a motion picture made for television', 'best performance by an actor in a limited series or a motion picture made for television', 'best performance by an actress in a television series - drama', 'best performance by an actor in a television series - drama', 'best performance by an actress in a television series - musical or comedy', 'best performance by an actor in a television series - musical or comedy', 'best performance by an actress in a supporting role in a series, limited series or motion picture made for television', 'best performance by an actor in a supporting role in a series, limited series or motion picture made for television', 'cecil b. demille award']
 
@@ -36,21 +34,19 @@ lower_tweets = None
 split_tweets = None
 gg = GoldenGlobe()
 
-"""
+
 # Connects to mongodb database with uploaded imdb actors dataset
 client = pymongo.MongoClient("mongodb+srv://mry2745:nlplab1pw@cluster0.tmoqg.mongodb.net/test")
 db = client["imdb"] # database name: imdb
 collection = db["actors"] # collection name: actors
-"""
+
 
 def is_actor(input):
     # Queries mongodb database to see if the input string is an actor in the imdb dataset
+    result = list(collection.find({"primaryName": {"$in": [input.lower()]}})) # change to primary name
+    # result2 = list(collection.find({"primaryName": {"$in": ["not an actor"]}})) # change to primary name
+    return len(result) > 0
 
-    ### TODO - return a value
-    result = list(collection.find({"primaryName": {"$in": [input]}})) # change to primary name
-    print(len(result) > 0)
-    result2 = list(collection.find({"primaryName": {"$in": ["not an actor"]}})) # change to primary name
-    print(len(result2) > 0)
 
 
 def get_hosts(year):
@@ -166,8 +162,11 @@ def get_nominees(year):
                 for nltk_result_leaf in nltk_result.leaves():
                     name += nltk_result_leaf[0] + ' '
                 if nltk_result.label() == "PERSON":
-                    print('Type: ', nltk_result.label(), 'Name: ', name)
+                    # print('Type: ', nltk_result.label(), 'Name: ', name)
                     # check if they are an actor
+                    if is_actor(name):
+                        # add to list of nominees
+                        print("is actor")
 
 def get_winner(year):
     '''Winners is a dictionary with the hard coded award
@@ -309,6 +308,78 @@ def get_presenters(year):
     names as keys, and each entry a list of strings. Do NOT change the
     name of this function or what it returns.'''
     # Your code here
+    presenters = populate_awards()
+    for award in presenters:
+        potential_presenters = {}
+        award_short = ' '.join(award.split(' ')[0:2])
+        for tweet in data:
+            text = tweet.lower()
+            if re.search(award_short.lower(),text) and re.search("(present|announce)",text):
+                nltk_results = ne_chunk(pos_tag(word_tokenize(tweet)))
+                for nltk_result in nltk_results:
+                    if type(nltk_result) == Tree:
+                        name = ''
+                        for nltk_result_leaf in nltk_result.leaves():
+                            name += nltk_result_leaf[0] + ' '
+                        name = name.strip()
+                        if nltk_result.label() == "PERSON":
+                            matched = 0
+                            og_name = []
+                            for person in potential_presenters:
+                                # clustering names if short name contained in other
+                                if re.search(name,person):
+                                    potential_presenters[person] += 1
+                                    matched = True
+                                    full_name = person
+                                    og_name.append(person)
+                                elif re.search(person,name):
+                                    potential_presenters[person] += 1
+                                    matched = True
+                                    full_name = name
+                                    og_name.append(person)
+
+                            if matched:
+                                for og in og_name:
+                                    try:
+                                        potential_presenters[full_name] += potential_presenters.pop(og)
+                                    except:
+                                        potential_presenters[full_name] = potential_presenters.pop(og)
+                            else:
+                                potential_presenters[name] = 1
+
+
+                            # if is_actor(name):
+                            #     potential_presenters[name] += 0.5
+        # try:
+        #     presenter1 = max(potential_presenters)
+        #     while not is_actor(presenter1):
+        #         potential_presenters.pop(presenter1)
+        #         presenter1 = max(potential_presenters)
+            
+        #     try:
+        #         presenter2 = max(potential_presenters)
+        #         while not is_actor(presenter2):
+        #             potential_presenters.pop(presenter2)
+        #             presenter2 = max(potential_presenters)
+        #         presenters[award] = [presenter1,presenter2]
+        #     except:
+        #         print("only one match for",award)
+        #         presenters[award] = [presenter1]
+        # except:
+        #    print("no one matched for",award)
+        try:
+            presenter1 = max(potential_presenters) 
+            potential_presenters.pop(presenter1)
+            presenter2 = max(potential_presenters)
+            presenters[award] = [presenter1,presenter2]
+        except:
+            print("no one matched for",award)
+        
+        
+
+
+
+    print(presenters)
     return presenters
 
 def pre_ceremony():
@@ -346,13 +417,14 @@ def main():
     # gg = populate_awards_nominees(gg)
     # get awards
     # get_awards(2013)
-    get_winner(2013)
+    # get_winner(2013)
     # get_nominees(2013)
     # time1 = time.time()
     # get_hosts(2013)
     # time2 = time.time()
     # print("get_hosts using nltk elapsed time: " + str(time2-time1))
     is_actor("jennifer lawrence")
+    get_presenters(2013)
     return
 
 if __name__ == '__main__':
