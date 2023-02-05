@@ -45,8 +45,10 @@ def is_actor(input):
     # Queries mongodb database to see if the input string is an actor in the imdb dataset
 
     ### TODO - return a value
-    result = list(collection.find({"primaryName": {"$in": [input]}})) # change to primary name
-    return len(result) > 0
+    result1 = list(collection.find({"primaryName": {"$in": [input]}})) # change to primary name
+    result2 = list(collection.find({"primaryName": {"$in": ["not an actor"]}})) # change to primary name
+    return len(result1) > 0
+
 
 
 def get_hosts(year):
@@ -287,7 +289,7 @@ def get_presenters(year):
         award_short = ' '.join(award.split(' ')[0:2])
         for tweet in data:
             text = tweet.lower()
-            if re.search(award_short.lower(),text) and re.search("present",text):
+            if re.search(award_short.lower(),text) and re.search("(present|announce)",text):
                 nltk_results = ne_chunk(pos_tag(word_tokenize(tweet)))
                 for nltk_result in nltk_results:
                     if type(nltk_result) == Tree:
@@ -296,43 +298,55 @@ def get_presenters(year):
                             name += nltk_result_leaf[0] + ' '
                         name = name.strip()
                         if nltk_result.label() == "PERSON":
-                            matched = False
+                            matched = 0
+                            og_name = []
                             for person in potential_presenters:
                                 # clustering names if short name contained in other
                                 if re.search(name,person):
                                     potential_presenters[person] += 1
                                     matched = True
                                     full_name = person
-                                    og_name = person
+                                    og_name.append(person)
                                 elif re.search(person,name):
                                     potential_presenters[person] += 1
                                     matched = True
                                     full_name = name
-                                    og_name = person
+                                    og_name.append(person)
 
                             if matched:
-                                potential_presenters[full_name] = potential_presenters.pop(og_name)
+                                for og in og_name:
+                                    try:
+                                        potential_presenters[full_name] += potential_presenters.pop(og)
+                                    except:
+                                        potential_presenters[full_name] = potential_presenters.pop(og)
                             else:
                                 potential_presenters[name] = 1
 
 
                             # if is_actor(name):
                             #     potential_presenters[name] += 0.5
-        try:
-            presenter1 = max(potential_presenters)
-            while not is_actor(presenter1):
-                potential_presenters.pop(presenter1)
-                presenter1 = max(potential_presenters)
+        # try:
+        #     presenter1 = max(potential_presenters)
+        #     while not is_actor(presenter1):
+        #         potential_presenters.pop(presenter1)
+        #         presenter1 = max(potential_presenters)
             
-            try:
-                presenter2 = max(potential_presenters)
-                while not is_actor(presenter2):
-                    potential_presenters.pop(presenter2)
-                    presenter2 = max(potential_presenters)
-                presenters[award] = [presenter1,presenter2]
-            except:
-                print("only one match for",award)
-                presenters[award] = [presenter1]
+        #     try:
+        #         presenter2 = max(potential_presenters)
+        #         while not is_actor(presenter2):
+        #             potential_presenters.pop(presenter2)
+        #             presenter2 = max(potential_presenters)
+        #         presenters[award] = [presenter1,presenter2]
+        #     except:
+        #         print("only one match for",award)
+        #         presenters[award] = [presenter1]
+        # except:
+        #    print("no one matched for",award)
+        try:
+            presenter1 = max(potential_presenters) 
+            potential_presenters.pop(presenter1)
+            presenter2 = max(potential_presenters)
+            presenters[award] = [presenter1,presenter2]
         except:
             print("no one matched for",award)
         
