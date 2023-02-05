@@ -175,19 +175,15 @@ def get_winner(year):
     Do NOT change the name of this function or what it returns.'''
     # Your code here
 
+    # TODO: change award_short
+
     winners = populate_awards()
-    # TODO @Max: given all the awards (keys of "winners" are awards, value should be the winner), find all the winners WITHOUT knowing the nominees
-    # Reference get_hosts for how to use nltk and keeping a voting system of potential winners. Only use nltk on tweets that pass the regex checks BUT nltk only works on the non-lowercase tweets, so make sure you use the regex checks on lower_tweets[i] and then if that passes, then use nltk on data[i]
-    
-    # global gg
-    # for award in gg.awards:
-    #     winner_dict = {}
-    #     for nominee in award.nominees:
-    #         winner_dict[nominee] = 0
+
     for award in winners:
         isPerson = re.search(r"\bactor\b|\bactress\b", award) != None
         potential_winners = defaultdict(int)
         award_short = ' '.join(award.split(' ')[0:2])
+        potential_tweets = {}
         for i in range(len(data)):
             tweet = data[i]
             lower_tweet = lower_tweets[i]
@@ -205,17 +201,23 @@ def get_winner(year):
                             if nltk_result.label() == "PERSON" and not re.search("[Bb]est",name):# and is_actor(name):
                                 #print(name, " is a potential winner")
                                 potential_winners[name] += 1
+                                potential_tweets[tweet] = name
                 # look for movies using similar strategy to get_awards
                 else:
-                    # get all capitalized things from sentence
-                    split_tweet_upper = data[i].split()
-                    split_tweet = split_tweets[i]
-                    if winSearch: #look at first half
+                    # strategy 1: +2 for anything inside quotes
+                    try:
+                        match1 = re.search(r'"(.*?)"', tweet).group().strip(punctuation)
+                        potential_winners[match1] += 2
+                        potential_tweets[tweet] = match1
+                    except:
+                    # strategy 2: get all capitalized things from sentence AFTER the word "for"
+                        split_tweet_upper = data[i].split()
+                        split_tweet = split_tweets[i]
                         try:
-                            won_index = split_tweet.index("won")
+                            for_index = split_tweet.index("for")
                             foundCapital = False
                             endIndex = None
-                            for i in range(0, won_index):
+                            for i in range(for_index+1, len(split_tweet)):
                                 if foundCapital and not split_tweet_upper[i][0].isupper():
                                     break
                                 if split_tweet_upper[i][0].isupper():
@@ -227,48 +229,70 @@ def get_winner(year):
                             if endIndex:
                                 delimiter = " "
                                 potential_winners[(delimiter.join(split_tweet_upper[foundCapital: endIndex+1]).strip(punctuation))] += 1
-                        except:
-                            try:
-                                wins_index = split_tweet.index("wins")
-                                foundCapital = False
-                                endIndex = None
-                                for i in range(0, wins_index):
-                                    if foundCapital and not split_tweet_upper[i][0].isupper():
-                                        break
-                                    if split_tweet_upper[i][0].isupper():
-                                        if foundCapital == False and type(foundCapital) != int:
-                                            foundCapital = i
-                                            endIndex = i
-                                        else:
-                                            endIndex = i
-                                if endIndex:
-                                    delimiter = " "
-                                    potential_winners[(
-                                        delimiter.join(split_tweet_upper[foundCapital: endIndex + 1]).strip(
-                                            punctuation))] += 1
-                            except:
-                                continue
-                    else:
-                        try:
-                            goes_index = split_tweet.index("goes")
-                            to_index = split_tweet[goes_index:].index("to")
-                            if to_index == 1:
-                                foundCapital = False
-                                endIndex = None
-                                for i in range(goes_index + 2, len(split_tweet_upper)):
-                                    if foundCapital and not split_tweet_upper[i][0].isupper():
-                                        break
-                                    if split_tweet_upper[i][0].isupper():
-                                        if foundCapital == False and type(foundCapital) != int:
-                                            foundCapital = i
-                                            endIndex = i
-                                        else:
-                                            endIndex = i
-                                if endIndex:
-                                    delimiter = " "
-                                    potential_winners[(delimiter.join(split_tweet_upper[foundCapital: endIndex+1]).strip(punctuation))] += 1
+                                potential_tweets[tweet] = (delimiter.join(split_tweet_upper[foundCapital: endIndex+1]).strip(punctuation))
                         except:
                             continue
+
+                    # strategy 3: get first group of words capitalized before "wins" or "won", or after "goes to" - LOW SUCCESS (i.e. Quentin Tarantino overwhelmingly had greater count than Django Unchained)
+                    # if winSearch: #look at first half
+                    #     try:
+                    #         won_index = split_tweet.index("won")
+                    #         foundCapital = False
+                    #         endIndex = None
+                    #         for i in range(0, won_index):
+                    #             if foundCapital and not split_tweet_upper[i][0].isupper():
+                    #                 break
+                    #             if split_tweet_upper[i][0].isupper():
+                    #                 if foundCapital == False and type(foundCapital) != int:
+                    #                     foundCapital = i
+                    #                     endIndex = i
+                    #                 else:
+                    #                     endIndex = i
+                    #         if endIndex:
+                    #             delimiter = " "
+                    #             potential_winners[(delimiter.join(split_tweet_upper[foundCapital: endIndex+1]).strip(punctuation))] += 1
+                    #     except:
+                    #         try:
+                    #             wins_index = split_tweet.index("wins")
+                    #             foundCapital = False
+                    #             endIndex = None
+                    #             for i in range(0, wins_index):
+                    #                 if foundCapital and not split_tweet_upper[i][0].isupper():
+                    #                     break
+                    #                 if split_tweet_upper[i][0].isupper():
+                    #                     if foundCapital == False and type(foundCapital) != int:
+                    #                         foundCapital = i
+                    #                         endIndex = i
+                    #                     else:
+                    #                         endIndex = i
+                    #             if endIndex:
+                    #                 delimiter = " "
+                    #                 potential_winners[(
+                    #                     delimiter.join(split_tweet_upper[foundCapital: endIndex + 1]).strip(
+                    #                         punctuation))] += 1
+                    #         except:
+                    #             continue
+                    # else:
+                    #     try:
+                    #         goes_index = split_tweet.index("goes")
+                    #         to_index = split_tweet[goes_index:].index("to")
+                    #         if to_index == 1:
+                    #             foundCapital = False
+                    #             endIndex = None
+                    #             for i in range(goes_index + 2, len(split_tweet_upper)):
+                    #                 if foundCapital and not split_tweet_upper[i][0].isupper():
+                    #                     break
+                    #                 if split_tweet_upper[i][0].isupper():
+                    #                     if foundCapital == False and type(foundCapital) != int:
+                    #                         foundCapital = i
+                    #                         endIndex = i
+                    #                     else:
+                    #                         endIndex = i
+                    #             if endIndex:
+                    #                 delimiter = " "
+                    #                 potential_winners[(delimiter.join(split_tweet_upper[foundCapital: endIndex+1]).strip(punctuation))] += 1
+                    #     except:
+                    #         continue
         maxPW = None
         for pw in potential_winners:
             if not maxPW:
