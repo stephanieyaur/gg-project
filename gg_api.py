@@ -43,11 +43,9 @@ collection = db["actors"] # collection name: actors
 
 def is_actor(input):
     # Queries mongodb database to see if the input string is an actor in the imdb dataset
-
-    ### TODO - return a value
-    result1 = list(collection.find({"primaryName": {"$in": [input]}})) # change to primary name
-    result2 = list(collection.find({"primaryName": {"$in": ["not an actor"]}})) # change to primary name
-    return len(result1) > 0
+    result = list(collection.find({"primaryName": {"$in": [input.lower()]}})) # change to primary name
+    # result2 = list(collection.find({"primaryName": {"$in": ["not an actor"]}})) # change to primary name
+    return len(result) > 0
 
 
 
@@ -164,8 +162,11 @@ def get_nominees(year):
                 for nltk_result_leaf in nltk_result.leaves():
                     name += nltk_result_leaf[0] + ' '
                 if nltk_result.label() == "PERSON":
-                    print('Type: ', nltk_result.label(), 'Name: ', name)
+                    # print('Type: ', nltk_result.label(), 'Name: ', name)
                     # check if they are an actor
+                    if is_actor(name):
+                        # add to list of nominees
+                        print("is actor")
 
 def get_winner(year):
     '''Winners is a dictionary with the hard coded award
