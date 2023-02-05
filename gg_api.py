@@ -285,6 +285,33 @@ def get_presenters(year):
     names as keys, and each entry a list of strings. Do NOT change the
     name of this function or what it returns.'''
     # Your code here
+    presenters = populate_awards()
+    for award in presenters:
+        potential_presenters = {}
+        award_short = ' '.join(award.split(' ')[0:2])
+        for tweet in data:
+            text = tweet["text"].lower()
+            if re(award_short.lower(),text) and re("(present|announce",text):
+                nltk_results = ne_chunk(pos_tag(word_tokenize(tweet["text"])))
+                for nltk_result in nltk_results:
+                    if type(nltk_result) == Tree:
+                        name = ''
+                        for nltk_result_leaf in nltk_result.leaves():
+                            name += nltk_result_leaf[0] + ' '
+                        if nltk_result.label() == "PERSON":
+                            potential_presenters[name] += 1
+                            # if is_actor(name):
+                            #     potential_presenters[name] += 0.5
+        
+        presenter1 = max(potential_presenters)
+        potential_presenters[max(potential_presenters)] = 0
+        presenter2 = max(potential_presenters)
+
+        presenters[award] = [presenter1,presenter2]
+
+    
+
+
     return presenters
 
 def pre_ceremony():
