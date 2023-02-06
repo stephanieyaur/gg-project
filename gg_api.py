@@ -1,4 +1,5 @@
 '''Version 0.35'''
+from asyncio import SendfileNotAvailableError
 import time
 from tkinter.tix import TCL_WINDOW_EVENTS
 from unicodedata import name
@@ -21,9 +22,11 @@ import pymongo
 # nltk.download('maxent_ne_chunker')
 # nltk.download('words')
 #nltk.download('vader_lexicon')
+#nltk.download('stopwords')
 from nltk import ne_chunk, pos_tag, word_tokenize, sentiment
 from nltk.tree import Tree
 from collections import defaultdict
+from nltk.sentiment import SentimentIntensityAnalyzer
 
 OFFICIAL_AWARDS_1315 = ['cecil b. demille award', 'best motion picture - drama', 'best performance by an actress in a motion picture - drama', 'best performance by an actor in a motion picture - drama', 'best motion picture - comedy or musical', 'best performance by an actress in a motion picture - comedy or musical', 'best performance by an actor in a motion picture - comedy or musical', 'best animated feature film', 'best foreign language film', 'best performance by an actress in a supporting role in a motion picture', 'best performance by an actor in a supporting role in a motion picture', 'best director - motion picture', 'best screenplay - motion picture', 'best original score - motion picture', 'best original song - motion picture', 'best television series - drama', 'best performance by an actress in a television series - drama', 'best performance by an actor in a television series - drama', 'best television series - comedy or musical', 'best performance by an actress in a television series - comedy or musical', 'best performance by an actor in a television series - comedy or musical', 'best mini-series or motion picture made for television', 'best performance by an actress in a mini-series or motion picture made for television', 'best performance by an actor in a mini-series or motion picture made for television', 'best performance by an actress in a supporting role in a series, mini-series or motion picture made for television', 'best performance by an actor in a supporting role in a series, mini-series or motion picture made for television']
 OFFICIAL_AWARDS_1819 = ['best motion picture - drama', 'best motion picture - musical or comedy', 'best performance by an actress in a motion picture - drama', 'best performance by an actor in a motion picture - drama', 'best performance by an actress in a motion picture - musical or comedy', 'best performance by an actor in a motion picture - musical or comedy', 'best performance by an actress in a supporting role in any motion picture', 'best performance by an actor in a supporting role in any motion picture', 'best director - motion picture', 'best screenplay - motion picture', 'best motion picture - animated', 'best motion picture - foreign language', 'best original score - motion picture', 'best original song - motion picture', 'best television series - drama', 'best television series - musical or comedy', 'best television limited series or motion picture made for television', 'best performance by an actress in a limited series or a motion picture made for television', 'best performance by an actor in a limited series or a motion picture made for television', 'best performance by an actress in a television series - drama', 'best performance by an actor in a television series - drama', 'best performance by an actress in a television series - musical or comedy', 'best performance by an actor in a television series - musical or comedy', 'best performance by an actress in a supporting role in a series, limited series or motion picture made for television', 'best performance by an actor in a supporting role in a series, limited series or motion picture made for television', 'cecil b. demille award']
@@ -177,7 +180,8 @@ def get_winner(year):
     # TODO: change award_short
 
     winners = populate_awards()
-
+    stopwords = nltk.corpus.stopwords.words("english")
+    sia = SentimentIntensityAnalyzer()
     for award in winners:
         isPerson = re.search(r"\bactor\b|\bactress\b", award) != None
         potential_winners = defaultdict(int)
@@ -186,12 +190,14 @@ def get_winner(year):
         for i in range(len(data)):
             tweet = data[i]
             lower_tweet = lower_tweets[i]
+            tokenized_tweet = word_tokenize(tweet)
             winSearch = re.search(r"\bwon\b|\bwins\b",lower_tweet)
             goesToSearch = re.search("goes to",lower_tweet)
             if (winSearch or goesToSearch) and re.search(award_short,lower_tweet):
+                filtered_tweet = [w for w in tokenized_tweet if not w.lower() in stopwords]
                 # look for actors using NLTK
                 if isPerson:
-                    nltk_results = ne_chunk(pos_tag(word_tokenize(tweet)))
+                    nltk_results = ne_chunk(pos_tag(tokenized_tweet))
                     for nltk_result in nltk_results:
                         if type(nltk_result) == Tree:
                             name = ''
@@ -201,6 +207,10 @@ def get_winner(year):
                                 #print(name, " is a potential winner")
                                 potential_winners[name] += 1
                                 potential_tweets[tweet] = name
+                    # add bonus for how positive the tweet is
+                    filtered_tweet = ' '.join(filtered_tweet)
+                    score = sia.polarity_scores(filtered_tweet)
+                    potential_winners[name] += score["pos"]
                 # look for movies using similar strategy to get_awards
                 else:
                     # strategy 1: +2 for anything inside quotes
@@ -231,6 +241,7 @@ def get_winner(year):
                                 potential_tweets[tweet] = (delimiter.join(split_tweet_upper[foundCapital: endIndex+1]).strip(punctuation))
                         except:
                             continue
+                    
 
                     # strategy 3: get first group of words capitalized before "wins" or "won", or after "goes to" - LOW SUCCESS (i.e. Quentin Tarantino overwhelmingly had greater count than Django Unchained)
                     # if winSearch: #look at first half
@@ -292,6 +303,7 @@ def get_winner(year):
                     #                 potential_winners[(delimiter.join(split_tweet_upper[foundCapital: endIndex+1]).strip(punctuation))] += 1
                     #     except:
                     #         continue
+
         maxPW = None
         for pw in potential_winners:
             if not maxPW:
@@ -310,11 +322,17 @@ def get_presenters(year):
     # Your code here
     presenters = populate_awards()
     for award in presenters:
+        count = 0
         potential_presenters = {}
-        award_short = ' '.join(award.split(' ')[0:2])
+        if award.split(' ')[1].lower() == "performance":
+            award_short = ' '.join(award.split(' ')[0:8])
+        else:
+            award_short = ' '.join(award.split(' ')[0:2])
         for tweet in data:
             text = tweet.lower()
-            if re.search(award_short.lower(),text) and re.search("(present|announce)",text):
+            
+            if re.search(award_short,text) and re.search("(pres|announce|intro|gave)",text):
+                count += 1
                 nltk_results = ne_chunk(pos_tag(word_tokenize(tweet)))
                 for nltk_result in nltk_results:
                     if type(nltk_result) == Tree:
@@ -350,12 +368,14 @@ def get_presenters(year):
 
                             # if is_actor(name):
                             #     potential_presenters[name] += 0.5
+        #print(count,"matches for",award)
+        
         # try:
         #     presenter1 = max(potential_presenters)
         #     while not is_actor(presenter1):
         #         potential_presenters.pop(presenter1)
         #         presenter1 = max(potential_presenters)
-            
+        #     potential_presenters.pop(presenter1)
         #     try:
         #         presenter2 = max(potential_presenters)
         #         while not is_actor(presenter2):
@@ -367,13 +387,31 @@ def get_presenters(year):
         #         presenters[award] = [presenter1]
         # except:
         #    print("no one matched for",award)
-        try:
-            presenter1 = max(potential_presenters) 
-            potential_presenters.pop(presenter1)
-            presenter2 = max(potential_presenters)
-            presenters[award] = [presenter1,presenter2]
-        except:
-            print("no one matched for",award)
+
+        presenter1 = None
+        presenter2 = None
+
+        for pres in potential_presenters:
+            if is_actor(pres) or pres == "jlo":
+                if not presenter1:
+                    presenter1 = pres
+                elif not presenter2:
+                    presenter2 = pres
+                else:
+                    if potential_presenters[pres] > potential_presenters[presenter1] or potential_presenters[pres] > potential_presenters[presenter2]:
+                        if potential_presenters[presenter1] < potential_presenters[presenter2]:
+                            presenter1 = presenter2
+                        presenter2 = pres
+        if not presenter1 or not presenter2:
+            print("not enough matches for",award)
+        presenters[award] = [presenter1,presenter2]
+        # try:
+        #     presenter1 = max(potential_presenters) 
+        #     potential_presenters.pop(presenter1)
+        #     presenter2 = max(potential_presenters)
+        #     presenters[award] = [presenter1,presenter2]
+        # except:
+        #     print("no one matched for",award)
         
         
 
@@ -417,7 +455,7 @@ def main():
     # gg = populate_awards_nominees(gg)
     # get awards
     # get_awards(2013)
-    # get_winner(2013)
+    get_winner(2013)
     # get_nominees(2013)
     # time1 = time.time()
     # get_hosts(2013)
