@@ -6,6 +6,7 @@ from unicodedata import name
 from Award import Award
 from GoldenGlobe import GoldenGlobe
 from preliminary_helpers import populate_awards
+from preliminary_helpers import categorize_tweets
 from string import punctuation
 
 import json
@@ -35,6 +36,7 @@ lower_tweets = None
 split_tweets = None
 final_presenters = {"best screenplay - motion picture": ["robert pattinson", "amanda seyfried"]}
 gg = GoldenGlobe()
+categorized_tweet_dict = categorize_tweets(2013)
 
 
 # Connects to mongodb database with uploaded imdb actors dataset

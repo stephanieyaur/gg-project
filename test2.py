@@ -118,16 +118,29 @@ def get_nominees(year):
                         potential_nominees[match1] += 2
                     except:
                     # strategy 2: get all capitalized groups
-                        nltk_results = ne_chunk(pos_tag(word_tokenize(tweet)))
-                        for nltk_result in nltk_results:
-                            if type(nltk_result) == Tree:
-                                name = ''
-                                for nltk_result_leaf in nltk_result.leaves():
-                                    name += nltk_result_leaf[0] + ' '
-                                if nltk_result.label() == "NP": # might want to use name_pattern
-                                    stop_words = ["golden", "globes", "goldenglobes"]
-                                    if not any([x in name.lower() for x in stop_words]) and name.lower().rstrip() not in potential_nominees:
-                                        potential_nominees[name.lower().rstrip()] += 1
+                            stop_words = ["golden", "globes", "goldenglobes"]
+                            foundCapital = False
+                            start_index = 0
+                            end_index = None
+                            split_tweet = tweet.split()
+                            for i in range(0, len(split_tweet)):
+                                if foundCapital == False:
+                                    if split_tweet[i][0].isupper(): # found beginning of capitalized group
+                                        start_index = i
+                                        end_index = i
+                                        foundCapital = True
+                                else:
+                                    if split_tweet[i][0].isupper(): # appending to capitalized group
+                                        end_index = i
+                                    else: # end of capitalized group
+                                        foundCapital = False
+                                        
+                                        delimiter = " "
+                                        name = delimiter.join(split_tweet[start_index: end_index+1]).strip(punctuation)
+                                        name = name.lower().rstrip()
+                                        if not any([x in name for x in stop_words]) and name not in potential_nominees:
+                                            potential_nominees[name] += 1
+
 
 
     for award in award_list_not_person:
