@@ -255,10 +255,6 @@ def get_nominees(year):
         top_nominees = nlargest(4, potential_nominees, key = potential_nominees.get)
         nominees[award] = top_nominees
 
-
-
-    global nominee_global
-    nominee_global = nominees
     return nominees
 
 
@@ -464,19 +460,32 @@ def main():
     pre_ceremony()
     # # get award and nominees within GoldenGlobes object
     global gg
-    # gg = populate_awards_nominees(gg)
-    # get awards
-    # get_awards(2013)
-    get_winner(2013)
-    # get_nominees(2013)
-    # time1 = time.time()
-    # get_hosts(2013)
-    # time2 = time.time()
-    # print("get_hosts using nltk elapsed time: " + str(time2-time1))
-    # is_actor("jennifer lawrence")
-    # get_presenters(2013)
+    awards = get_awards(2013)
     nominees = get_nominees(2013)
+    presenters = get_presenters(2013)
+    hosts = get_hosts(2013)
+    winners = get_winners(2013)
+
+    convert_to_json(awards, nominees, presenters, hosts, winners)
+
     return
+
+def convert_to_json(awards, nominees, presenters, hosts, winners):
+    dict = {}
+    dict["hosts"] = hosts
+    data = {}
+    for award in OFFICIAL_AWARDS_1315:
+        sub = {}
+        sub["nominees"] = nominees[award]
+        sub["presenters"] = presenters[award]
+        sub["winner"] = winners[award]
+        data[award] = sub
+    dict["award_data"] = data
+
+    json_object = json.dumps(dictionary, indent=4)
+
+    with open("final.json", "w") as outfile:
+        outfile.write(json_object)
 
 if __name__ == '__main__':
     main()
