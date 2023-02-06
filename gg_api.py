@@ -10,6 +10,13 @@ import pymongo
 import json
 import re
 
+nltk.download('punkt')
+nltk.download('averaged_perceptron_tagger')
+nltk.download('maxent_ne_chunker')
+nltk.download('words')
+nltk.download('vader_lexicon')
+nltk.download('stopwords')
+
 from tkinter.tix import TCL_WINDOW_EVENTS
 from unicodedata import name
 from Award import Award
@@ -26,8 +33,6 @@ from nltk.tree import Tree
 from collections import defaultdict
 from heapq import nlargest
 
-nltk.download('words')
-
 OFFICIAL_AWARDS_1315 = ['cecil b. demille award', 'best motion picture - drama', 'best performance by an actress in a motion picture - drama', 'best performance by an actor in a motion picture - drama', 'best motion picture - comedy or musical', 'best performance by an actress in a motion picture - comedy or musical', 'best performance by an actor in a motion picture - comedy or musical', 'best animated feature film', 'best foreign language film', 'best performance by an actress in a supporting role in a motion picture', 'best performance by an actor in a supporting role in a motion picture', 'best director - motion picture', 'best screenplay - motion picture', 'best original score - motion picture', 'best original song - motion picture', 'best television series - drama', 'best performance by an actress in a television series - drama', 'best performance by an actor in a television series - drama', 'best television series - comedy or musical', 'best performance by an actress in a television series - comedy or musical', 'best performance by an actor in a television series - comedy or musical', 'best mini-series or motion picture made for television', 'best performance by an actress in a mini-series or motion picture made for television', 'best performance by an actor in a mini-series or motion picture made for television', 'best performance by an actress in a supporting role in a series, mini-series or motion picture made for television', 'best performance by an actor in a supporting role in a series, mini-series or motion picture made for television']
 OFFICIAL_AWARDS_1819 = ['best motion picture - drama', 'best motion picture - musical or comedy', 'best performance by an actress in a motion picture - drama', 'best performance by an actor in a motion picture - drama', 'best performance by an actress in a motion picture - musical or comedy', 'best performance by an actor in a motion picture - musical or comedy', 'best performance by an actress in a supporting role in any motion picture', 'best performance by an actor in a supporting role in any motion picture', 'best director - motion picture', 'best screenplay - motion picture', 'best motion picture - animated', 'best motion picture - foreign language', 'best original score - motion picture', 'best original song - motion picture', 'best television series - drama', 'best television series - musical or comedy', 'best television limited series or motion picture made for television', 'best performance by an actress in a limited series or a motion picture made for television', 'best performance by an actor in a limited series or a motion picture made for television', 'best performance by an actress in a television series - drama', 'best performance by an actor in a television series - drama', 'best performance by an actress in a television series - musical or comedy', 'best performance by an actor in a television series - musical or comedy', 'best performance by an actress in a supporting role in a series, limited series or motion picture made for television', 'best performance by an actor in a supporting role in a series, limited series or motion picture made for television', 'cecil b. demille award']
 
@@ -40,10 +45,9 @@ gg = GoldenGlobe()
 categorized_tweet_dict = categorize_tweets(2013)
 
 
-# Connects to mongodb database with uploaded imdb actors dataset
-client = pymongo.MongoClient("mongodb+srv://mry2745:nlplab1pw@cluster0.tmoqg.mongodb.net/test")
-db = client["imdb"] # database name: imdb
-collection = db["actors"] # collection name: actors
+# Connects to mongodb database with uploaded imdb actors datasetclient = pymongo.MongoClient("mongodb+srv://mry2745:nlplab1pw@cluster0.tmoqg.mongodb.net/test")
+# db = client["imdb"] # database name: imdb
+# collection = db["actors"] # collection name: actors
 
 
 def is_actor(input):
@@ -51,7 +55,6 @@ def is_actor(input):
     result = list(collection.find({"primaryName": {"$in": [input.lower()]}})) # change to primary name
     # result2 = list(collection.find({"primaryName": {"$in": ["not an actor"]}})) # change to primary name
     return len(result) > 0
-
 
 def get_hosts(year):
     '''Hosts is a list of one or more strings. Do NOT change the name
@@ -90,8 +93,7 @@ def get_hosts(year):
         elif not host2:
             host2 = h
         else:
-            if potential_hosts[h] > potential_hosts[host1] or potential_hosts[h] > potential_hosts[host2]:
-                # TODO: check h against imdb before doing any updating
+            if potential_hosts[h] > potential_hosts[host1] or potential_hosts[h] > potential_hosts[host2] and is_actor(potential_hosts[h]):
                 # this potential host needs to be added. check if need to remove host1 or host2
                 if potential_hosts[host1] < potential_hosts[host2]:
                     host1 = host2
@@ -262,21 +264,24 @@ def get_winner(year):
     Do NOT change the name of this function or what it returns.'''
     # Your code here
 
-    # TODO: change award_short
+    global categorized_tweet_dict
 
-    winners = populate_awards()
-
+    winners = {}
+    for a in OFFICIAL_AWARDS_1315:
+        winners[a] = None
+        winners2[a] = None
+    stopwords = nltk.corpus.stopwords.words("english")
+    sia = SentimentIntensityAnalyzer()
     for award in winners:
         isPerson = re.search(r"\bactor\b|\bactress\b", award) != None
         potential_winners = defaultdict(int)
-        award_short = ' '.join(award.split(' ')[0:2])
-        potential_tweets = {}
-        for i in range(len(data)):
-            tweet = data[i]
-            lower_tweet = lower_tweets[i]
+        for tweet in categorized_tweet_dict[award]:
+            lower_tweet = tweet.lower()
             winSearch = re.search(r"\bwon\b|\bwins\b",lower_tweet)
             goesToSearch = re.search("goes to",lower_tweet)
-            if (winSearch or goesToSearch) and re.search(award_short,lower_tweet):
+            if (winSearch or goesToSearch):
+                tokenized_tweet = word_tokenize(tweet)
+                filtered_tweet = [w for w in tokenized_tweet if not w.lower() in stopwords]
                 # look for actors using NLTK
                 if isPerson:
                     nltk_results = ne_chunk(pos_tag(word_tokenize(tweet)))
@@ -287,19 +292,27 @@ def get_winner(year):
                                 name += nltk_result_leaf[0] + ' '
                             if nltk_result.label() == "PERSON" and not re.search("[Bb]est",name):# and is_actor(name):
                                 #print(name, " is a potential winner")
+                                name = name.strip()
                                 potential_winners[name] += 1
-                                potential_tweets[tweet] = name
+                                # add bonus for how positive the tweet is
+                                filtered_tweet = ' '.join(filtered_tweet)
+                                score = sia.polarity_scores(filtered_tweet)
+                                potential_winners[name] += score["pos"]
                 # look for movies using similar strategy to get_awards
                 else:
                     # strategy 1: +2 for anything inside quotes
                     try:
                         match1 = re.search(r'"(.*?)"', tweet).group().strip(punctuation)
+                        match1 = match1.strip()
                         potential_winners[match1] += 2
-                        potential_tweets[tweet] = match1
+                        # add bonus for how positive the tweet is
+                        filtered_tweet = ' '.join(filtered_tweet)
+                        score = sia.polarity_scores(filtered_tweet)
+                        potential_winners[match1] += score["pos"]
                     except:
                     # strategy 2: get all capitalized things from sentence AFTER the word "for"
-                        split_tweet_upper = data[i].split()
-                        split_tweet = split_tweets[i]
+                        split_tweet_upper = tweet.split()
+                        split_tweet = lower_tweet.split()
                         try:
                             for_index = split_tweet.index("for")
                             foundCapital = False
@@ -315,79 +328,23 @@ def get_winner(year):
                                         endIndex = i
                             if endIndex:
                                 delimiter = " "
-                                potential_winners[(delimiter.join(split_tweet_upper[foundCapital: endIndex+1]).strip(punctuation))] += 1
-                                potential_tweets[tweet] = (delimiter.join(split_tweet_upper[foundCapital: endIndex+1]).strip(punctuation))
+                                name = (delimiter.join(split_tweet_upper[foundCapital: endIndex+1]).strip(punctuation))
+                                name = name.strip()
+                                potential_winners[name] += 1
+                                # add bonus for how positive the tweet is
+                                filtered_tweet = ' '.join(filtered_tweet)
+                                score = sia.polarity_scores(filtered_tweet)
+                                potential_winners[name] += score["pos"]
                         except:
                             continue
 
-                    # strategy 3: get first group of words capitalized before "wins" or "won", or after "goes to" - LOW SUCCESS (i.e. Quentin Tarantino overwhelmingly had greater count than Django Unchained)
-                    # if winSearch: #look at first half
-                    #     try:
-                    #         won_index = split_tweet.index("won")
-                    #         foundCapital = False
-                    #         endIndex = None
-                    #         for i in range(0, won_index):
-                    #             if foundCapital and not split_tweet_upper[i][0].isupper():
-                    #                 break
-                    #             if split_tweet_upper[i][0].isupper():
-                    #                 if foundCapital == False and type(foundCapital) != int:
-                    #                     foundCapital = i
-                    #                     endIndex = i
-                    #                 else:
-                    #                     endIndex = i
-                    #         if endIndex:
-                    #             delimiter = " "
-                    #             potential_winners[(delimiter.join(split_tweet_upper[foundCapital: endIndex+1]).strip(punctuation))] += 1
-                    #     except:
-                    #         try:
-                    #             wins_index = split_tweet.index("wins")
-                    #             foundCapital = False
-                    #             endIndex = None
-                    #             for i in range(0, wins_index):
-                    #                 if foundCapital and not split_tweet_upper[i][0].isupper():
-                    #                     break
-                    #                 if split_tweet_upper[i][0].isupper():
-                    #                     if foundCapital == False and type(foundCapital) != int:
-                    #                         foundCapital = i
-                    #                         endIndex = i
-                    #                     else:
-                    #                         endIndex = i
-                    #             if endIndex:
-                    #                 delimiter = " "
-                    #                 potential_winners[(
-                    #                     delimiter.join(split_tweet_upper[foundCapital: endIndex + 1]).strip(
-                    #                         punctuation))] += 1
-                    #         except:
-                    #             continue
-                    # else:
-                    #     try:
-                    #         goes_index = split_tweet.index("goes")
-                    #         to_index = split_tweet[goes_index:].index("to")
-                    #         if to_index == 1:
-                    #             foundCapital = False
-                    #             endIndex = None
-                    #             for i in range(goes_index + 2, len(split_tweet_upper)):
-                    #                 if foundCapital and not split_tweet_upper[i][0].isupper():
-                    #                     break
-                    #                 if split_tweet_upper[i][0].isupper():
-                    #                     if foundCapital == False and type(foundCapital) != int:
-                    #                         foundCapital = i
-                    #                         endIndex = i
-                    #                     else:
-                    #                         endIndex = i
-                    #             if endIndex:
-                    #                 delimiter = " "
-                    #                 potential_winners[(delimiter.join(split_tweet_upper[foundCapital: endIndex+1]).strip(punctuation))] += 1
-                    #     except:
-                    #         continue
         maxPW = None
         for pw in potential_winners:
-            if not maxPW:
+            if not maxPW and pw != "GoldenGlobes":
                 maxPW = pw
-            if potential_winners[maxPW] < potential_winners[pw]:
+            if potential_winners[maxPW] < potential_winners[pw] and pw != "GoldenGlobes":
                 maxPW = pw
         winners[award] = maxPW
-    #print(winners[award], " won ",award)
 
     return winners
 
@@ -503,7 +460,6 @@ def main():
     pre_ceremony()
     # # get award and nominees within GoldenGlobes object
     global gg
-
     awards = get_awards(2013)
     nominees = get_nominees(2013)
     presenters = get_presenters(2013)

@@ -11,7 +11,7 @@ The final answer is written to final.json.
 Commands had to run:
 python -m spacy download en_core_web_sm
 
-## Instructions
+## Instructuons
 ### MongoDb Database
 We created a MongoDb Database to store and access the imdb dataset of actors. 
 *Note: You do NOT need to follow the MongoDb Database instructions to run our code. The database is up and running.
@@ -25,7 +25,7 @@ We created a MongoDb Database to store and access the imdb dataset of actors.
    ```sh
     py actors_upload_mongodb.py
    ```
-
+   
 ## Descriptions
 - `preliminary_helpers.py` contains a function called categorize_tweets(year) which returns a dictionary to categorize tweets by award name. The key: award names | value: list of tweets. This is loaded as a global variable in `gg_api.py`called categorized_tweet_dict. 
 
