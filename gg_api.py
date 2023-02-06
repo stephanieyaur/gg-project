@@ -27,11 +27,8 @@ import pymongo
 from nltk import ne_chunk, pos_tag, word_tokenize, sentiment
 from nltk.tree import Tree
 from collections import defaultdict
-<<<<<<< HEAD
 from nltk.sentiment import SentimentIntensityAnalyzer
-=======
 from heapq import nlargest
->>>>>>> 5189b1c44fe51ab772df8326144f50e8ffe9a6d2
 
 OFFICIAL_AWARDS_1315 = ['cecil b. demille award', 'best motion picture - drama', 'best performance by an actress in a motion picture - drama', 'best performance by an actor in a motion picture - drama', 'best motion picture - comedy or musical', 'best performance by an actress in a motion picture - comedy or musical', 'best performance by an actor in a motion picture - comedy or musical', 'best animated feature film', 'best foreign language film', 'best performance by an actress in a supporting role in a motion picture', 'best performance by an actor in a supporting role in a motion picture', 'best director - motion picture', 'best screenplay - motion picture', 'best original score - motion picture', 'best original song - motion picture', 'best television series - drama', 'best performance by an actress in a television series - drama', 'best performance by an actor in a television series - drama', 'best television series - comedy or musical', 'best performance by an actress in a television series - comedy or musical', 'best performance by an actor in a television series - comedy or musical', 'best mini-series or motion picture made for television', 'best performance by an actress in a mini-series or motion picture made for television', 'best performance by an actor in a mini-series or motion picture made for television', 'best performance by an actress in a supporting role in a series, mini-series or motion picture made for television', 'best performance by an actor in a supporting role in a series, mini-series or motion picture made for television']
 OFFICIAL_AWARDS_1819 = ['best motion picture - drama', 'best motion picture - musical or comedy', 'best performance by an actress in a motion picture - drama', 'best performance by an actor in a motion picture - drama', 'best performance by an actress in a motion picture - musical or comedy', 'best performance by an actor in a motion picture - musical or comedy', 'best performance by an actress in a supporting role in any motion picture', 'best performance by an actor in a supporting role in any motion picture', 'best director - motion picture', 'best screenplay - motion picture', 'best motion picture - animated', 'best motion picture - foreign language', 'best original score - motion picture', 'best original song - motion picture', 'best television series - drama', 'best television series - musical or comedy', 'best television limited series or motion picture made for television', 'best performance by an actress in a limited series or a motion picture made for television', 'best performance by an actor in a limited series or a motion picture made for television', 'best performance by an actress in a television series - drama', 'best performance by an actor in a television series - drama', 'best performance by an actress in a television series - musical or comedy', 'best performance by an actor in a television series - musical or comedy', 'best performance by an actress in a supporting role in a series, limited series or motion picture made for television', 'best performance by an actor in a supporting role in a series, limited series or motion picture made for television', 'cecil b. demille award']
@@ -232,9 +229,7 @@ def get_winner(year):
     '''Winners is a dictionary with the hard coded award
     names as keys, and each entry containing a single string.
     Do NOT change the name of this function or what it returns.'''
-    # Your code here
 
-    # TODO: change award_short
 
     winners = populate_awards()
     stopwords = nltk.corpus.stopwords.words("english")
@@ -376,19 +371,20 @@ def get_presenters(year):
     '''Presenters is a dictionary with the hard coded award
     names as keys, and each entry a list of strings. Do NOT change the
     name of this function or what it returns.'''
+    print("Getting Presenters...")
+    global gg
     # Your code here
-    presenters = populate_awards()
-    for award in presenters:
+    presenters = {}
+    for award in OFFICIAL_AWARDS_1315:
         count = 0
         potential_presenters = {}
-        if award.split(' ')[1].lower() == "performance":
-            award_short = ' '.join(award.split(' ')[0:8])
-        else:
-            award_short = ' '.join(award.split(' ')[0:2])
-        for tweet in data:
+        award_tweets = categorized_tweet_dict[award]
+    
+        for tweet in award_tweets:
+            
             text = tweet.lower()
             
-            if re.search(award_short,text) and re.search("(pres|announce|intro|gave)",text):
+            if re.search("(pres|announce|intro|gave)",text):
                 count += 1
                 nltk_results = ne_chunk(pos_tag(word_tokenize(tweet)))
                 for nltk_result in nltk_results:
@@ -425,7 +421,7 @@ def get_presenters(year):
 
                             # if is_actor(name):
                             #     potential_presenters[name] += 0.5
-        #print(count,"matches for",award)
+        print("found",count,"matches for",award)
         
         # try:
         #     presenter1 = max(potential_presenters)
@@ -449,7 +445,7 @@ def get_presenters(year):
         presenter2 = None
 
         for pres in potential_presenters:
-            if is_actor(pres) or pres == "jlo":
+            if is_actor(pres):
                 if not presenter1:
                     presenter1 = pres
                 elif not presenter2:
@@ -460,7 +456,8 @@ def get_presenters(year):
                             presenter1 = presenter2
                         presenter2 = pres
         if not presenter1 or not presenter2:
-            print("not enough matches for",award)
+            #print("not enough matches for",award)
+            continue
         presenters[award] = [presenter1,presenter2]
         # try:
         #     presenter1 = max(potential_presenters) 
@@ -513,15 +510,15 @@ def main():
     # gg = populate_awards_nominees(gg)
     # get awards
     # get_awards(2013)
-    get_winner(2013)
+    #get_winner(2013)
     # get_nominees(2013)
     # time1 = time.time()
     # get_hosts(2013)
     # time2 = time.time()
     # print("get_hosts using nltk elapsed time: " + str(time2-time1))
     # is_actor("jennifer lawrence")
-    # get_presenters(2013)
-    get_nominees(2013)
+    get_presenters(2013)
+    # get_nominees(2013)
     return
 
 if __name__ == '__main__':

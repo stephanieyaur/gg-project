@@ -27,7 +27,7 @@ def populate_awards():
     answersDictionary = json.load(f)
     for award_name in answersDictionary["award_data"]:
         d[award_name] = 0
-    return 
+    return answersDictionary
     
 # Returns a dictionary to categorize tweets by award name.
 # Key: award names | Value: list of tweets
