@@ -1,0 +1,149 @@
+Hosts: Will Ferrell and Wiig
+
+Award: cecil b. demille award: 
+Nominees: robert downey, kristen stewart, simon baker, selena gomez
+Presenters: [],
+Winner: congrats
+
+Award: best motion picture - drama: 
+Nominees: argo, clooney and ben affleck, might, melhor filme
+Presenters: Bill Clinton, Lincoln
+Winner: Argo
+
+Award: best performance by an actress in a motion picture - drama 
+Nominees: jessica chastain, naomi watts
+Presenters: George Clooney, Drama
+Winner: Jessica Chastain
+        
+Award: best performance by an actor in a motion picture - drama 
+Nominees: daniel day-lewis, abraham lincoln, les miserables
+Presenters: Drama, Daniel
+Winner: Daniel
+
+Award: best motion picture - comedy or musical 
+Nominees: les miserables, miserables, selamat!! lesmis, les mis
+Presenters: Dustin, Hoffman
+Winner: Les Miserables
+
+Award: best performance by an actress in a motion picture - comedy or musical
+Nominees: jennifer lawrence, naomi watts
+Presenters: [],
+Winner: Jennifer Lawrence
+
+Award: best performance by an actor in a motion picture - comedy or musical 
+Nominees: les miserables, hugh jackman, les mis\u00e9rables
+Presenters: [],
+Winner: Jackman
+
+Award: best animated feature film
+Nominees: brave, animated film, hotel transylvania, two
+Presenters: Sacha Baron Cohen, Brave
+Winner: Brave
+
+Award: best foreign language film 
+Nominees: amour, austria's michael haneke, austria, foreign
+Presenters: Lincoln, Sylvester Stallone
+Winner: Amour
+
+Award: best performance by an actress in a supporting role in a motion picture 
+Nominees: anne hathaway
+Presenters: [],
+Winner: Anne Hathaway
+
+Award: best performance by an actor in a supporting role in a motion picture
+Nominees: christoph waltz, ed harris, bradley cooper
+Presenters: [],
+Winner: Christoph Waltz
+
+Award: best director - motion picture
+Nominees: ben affleck, michael haneke, jennifer garner, kathryn bigelow, jessica chastain, halle berry, ang lee, paul thomas anderson, 
+          orson welles, quentin tarantino, tom hooper, arthur miller,
+          bill clinton
+Presenters: Hollywood, Halle Berry
+Winner: Argo
+
+Award: best screenplay - motion picture 
+Nominees: django unchained, quentin tarantino, unchained, amanda seyfried
+Presenters: Quentin Tarantino, Robert Pattinson
+Winner: Django Unchained
+
+Award: best original score - motion picture
+Nominees: pi, mychael danna, life, toronto
+Presenters: Jason Statham, Mychael Danna
+Winner: Life of Pi
+
+Award: best original song - motion picture
+Nominees: adele, adele's, skyfall, god! oh
+Presenters: Taylor, Adele
+Winner: Skyfall
+
+Award: best television series - drama 
+Nominees: homeland, claire danes, do, argo
+Presenters: Drama, Paul Rudd
+Winner: Homeland
+            
+Award: best performance by an actress in a television series - drama 
+Nominees: jessica chastain, michelle dockery, jessica lange
+Presenters: Drama, Claire Danes
+Winner: Claire Danes
+            
+Award: best performance by an actor in a television series - drama
+Nominees: damian lewis, damien lewis, jeff daniels, bryan cranston
+Presenters: Bill, Clinton
+Winner: Damian Lewis
+
+Award: best television series - comedy or musical 
+Nominees: girls, modern family's, lena dunham, paul rudd
+Presenters: Jay, Jimmy Fallon
+Winner: Girls
+
+Award: best performance by an actress in a television series - comedy or musical: 
+Nominees: lena dunham, jennifer lawrence, amy poehler, tina fey
+Presenters: [],
+Winner: Lena Dunham
+
+Award: best performance by an actor in a television series - comedy or musical: 
+Nominees: don cheadle, hugh jackman, jim parsons, les miserables, matt leblanc, alec baldwin
+Presenters: [],
+Winner: Don Cheadle
+
+Award: best mini-series or motion picture made for television
+Nominees: game change, life, pi, movie most likely
+Presenters: Change, Sin
+Winner: Game Change
+
+Award: best performance by an actress in a mini-series or motion picture made for television
+Nominees: Julianne moore, tina fey, katie couric, maggie smith, jessica lange, jennifer lawrence, jessica chastain, nicole kidman
+Presenters: [],
+Winner: Julianne Moore
+
+Award: best performance by an actor in a mini-series or motion picture made for television 
+Nominees: kevin costner, don cheadle, ed harris, les miserables, bill clinton, woody harrelson, benedict cumberbatch,
+          damien lewis, damian lewis
+Presenters: Tina Fey, Bill Clinton
+Winner: Kevin Costner
+
+Award: best performance by an actress in a supporting role in a series, mini-series or motion picture made for television
+Nominees: maggie smith, anne hathaway, piper laurie
+Presenters: Maggie Smith, Dennis
+Winner: Maggie Smith
+
+Award: best performance by an actor in a supporting role in a series, mini-series or motion picture made for television
+Nominees: ed harris, christoph waltz, eric stonestreet
+Presenters: [],
+Winner: Ed Harris
+
+Award titles we got: 'best supporting actor in a motion picture', 'best picture', 'best performance', 'best supporting actress',
+                     'best motion picture - drama', 'best actress drama', 'best screenplay', 'best original score', 'best song', 
+                     'best actress in a tv series', 'best actress', 'best comedy or musical', 'best actress, drama', 'best comedy series', 
+                     'best supporting actor', 'best actress in a drama', 'best foreign film', 'best actor in a drama', 'best original song', 
+                     'best motion picture drama', 'best drama', 'best actor', 'best tv drama', 'best original song motion picture', 
+                     'best animated feature film', 'best dressed', 'best supporting actress in a motion picture', 'best picture drama', 
+                     'best motion picture - comedy or musical', 'best movie', 'best tv series drama', 'best actor in a comedy', 
+                     'best motion picture', 'best tv series - comedy', 'best comedy', 'best comedy/musical', 'best tv comedy', 
+                     'best animated feature', 'best picture (musical/comedy', 'best tv series', 'best foreign language film', 
+                     'best original song in a motion picture', 'best director'        
+
+Sentiment analysis added to voting system for get_winners. All potential winners were given a sentiment score and used in the overall vote. 
+We did not print these sentiment scores due to how many potential winners there were.
+    

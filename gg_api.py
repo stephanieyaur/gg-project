@@ -1,37 +1,28 @@
 '''Version 0.35'''
-import time
 import json
 import re
 import nltk
-import numpy
-import spacy
-import pandas as pd
 import pymongo
 import json
 import re
+import sys
 
-nltk.download('punkt')
-nltk.download('averaged_perceptron_tagger')
-nltk.download('maxent_ne_chunker')
 nltk.download('words')
-nltk.download('vader_lexicon')
 nltk.download('stopwords')
 
 from tkinter.tix import TCL_WINDOW_EVENTS
 from unicodedata import name
-from Award import Award
-from GoldenGlobe import GoldenGlobe
 from preliminary_helpers import populate_awards
 from preliminary_helpers import categorize_tweets
 from string import punctuation
 from gender_detector.gender_detector import GenderDetector
-from imdb import IMDb
 from preliminary_helpers import categorize_tweets
 from gender_detector.gender_detector import GenderDetector
 from nltk import ne_chunk, pos_tag, word_tokenize, sentiment
 from nltk.tree import Tree
 from collections import defaultdict
 from heapq import nlargest
+from nltk.sentiment import SentimentIntensityAnalyzer
 
 OFFICIAL_AWARDS_1315 = ['cecil b. demille award', 'best motion picture - drama', 'best performance by an actress in a motion picture - drama', 'best performance by an actor in a motion picture - drama', 'best motion picture - comedy or musical', 'best performance by an actress in a motion picture - comedy or musical', 'best performance by an actor in a motion picture - comedy or musical', 'best animated feature film', 'best foreign language film', 'best performance by an actress in a supporting role in a motion picture', 'best performance by an actor in a supporting role in a motion picture', 'best director - motion picture', 'best screenplay - motion picture', 'best original score - motion picture', 'best original song - motion picture', 'best television series - drama', 'best performance by an actress in a television series - drama', 'best performance by an actor in a television series - drama', 'best television series - comedy or musical', 'best performance by an actress in a television series - comedy or musical', 'best performance by an actor in a television series - comedy or musical', 'best mini-series or motion picture made for television', 'best performance by an actress in a mini-series or motion picture made for television', 'best performance by an actor in a mini-series or motion picture made for television', 'best performance by an actress in a supporting role in a series, mini-series or motion picture made for television', 'best performance by an actor in a supporting role in a series, mini-series or motion picture made for television']
 OFFICIAL_AWARDS_1819 = ['best motion picture - drama', 'best motion picture - musical or comedy', 'best performance by an actress in a motion picture - drama', 'best performance by an actor in a motion picture - drama', 'best performance by an actress in a motion picture - musical or comedy', 'best performance by an actor in a motion picture - musical or comedy', 'best performance by an actress in a supporting role in any motion picture', 'best performance by an actor in a supporting role in any motion picture', 'best director - motion picture', 'best screenplay - motion picture', 'best motion picture - animated', 'best motion picture - foreign language', 'best original score - motion picture', 'best original song - motion picture', 'best television series - drama', 'best television series - musical or comedy', 'best television limited series or motion picture made for television', 'best performance by an actress in a limited series or a motion picture made for television', 'best performance by an actor in a limited series or a motion picture made for television', 'best performance by an actress in a television series - drama', 'best performance by an actor in a television series - drama', 'best performance by an actress in a television series - musical or comedy', 'best performance by an actor in a television series - musical or comedy', 'best performance by an actress in a supporting role in a series, limited series or motion picture made for television', 'best performance by an actor in a supporting role in a series, limited series or motion picture made for television', 'cecil b. demille award']
@@ -41,13 +32,12 @@ data = None
 lower_tweets = None
 split_tweets = None
 final_presenters = {"best screenplay - motion picture": ["robert pattinson", "amanda seyfried"]}
-gg = GoldenGlobe()
 categorized_tweet_dict = categorize_tweets(2013)
 
-
-# Connects to mongodb database with uploaded imdb actors datasetclient = pymongo.MongoClient("mongodb+srv://mry2745:nlplab1pw@cluster0.tmoqg.mongodb.net/test")
-# db = client["imdb"] # database name: imdb
-# collection = db["actors"] # collection name: actors
+# Connects to mongodb database with uploaded imdb actors dataset
+client = pymongo.MongoClient("mongodb+srv://mry2745:nlplab1pw@cluster0.tmoqg.mongodb.net/test")
+db = client["imdb"] # database name: imdb
+collection = db["actors"] # collection name: actors
 
 
 def is_actor(input):
@@ -269,7 +259,6 @@ def get_winner(year):
     winners = {}
     for a in OFFICIAL_AWARDS_1315:
         winners[a] = None
-        winners2[a] = None
     stopwords = nltk.corpus.stopwords.words("english")
     sia = SentimentIntensityAnalyzer()
     for award in winners:
@@ -352,14 +341,21 @@ def get_presenters(year):
     '''Presenters is a dictionary with the hard coded award
     names as keys, and each entry a list of strings. Do NOT change the
     name of this function or what it returns.'''
+    print("Getting Presenters...")
+    global gg
     # Your code here
-    presenters = populate_awards()
-    for award in presenters:
+    presenters = {}
+    for award in OFFICIAL_AWARDS_1315:
+        count = 0
         potential_presenters = {}
-        award_short = ' '.join(award.split(' ')[0:2])
-        for tweet in data:
+        award_tweets = categorized_tweet_dict[award]
+    
+        for tweet in award_tweets:
+            
             text = tweet.lower()
-            if re.search(award_short.lower(),text) and re.search("(present|announce)",text):
+            
+            if re.search("(pres|announce|intro|gave)",text):
+                count += 1
                 nltk_results = ne_chunk(pos_tag(word_tokenize(tweet)))
                 for nltk_result in nltk_results:
                     if type(nltk_result) == Tree:
@@ -395,12 +391,14 @@ def get_presenters(year):
 
                             # if is_actor(name):
                             #     potential_presenters[name] += 0.5
+        print("found",count,"matches for",award)
+        
         # try:
         #     presenter1 = max(potential_presenters)
         #     while not is_actor(presenter1):
         #         potential_presenters.pop(presenter1)
         #         presenter1 = max(potential_presenters)
-            
+        #     potential_presenters.pop(presenter1)
         #     try:
         #         presenter2 = max(potential_presenters)
         #         while not is_actor(presenter2):
@@ -412,13 +410,33 @@ def get_presenters(year):
         #         presenters[award] = [presenter1]
         # except:
         #    print("no one matched for",award)
-        try:
-            presenter1 = max(potential_presenters) 
-            potential_presenters.pop(presenter1)
-            presenter2 = max(potential_presenters)
-            presenters[award] = [presenter1,presenter2]
-        except:
-            print("no one matched for",award)
+
+        presenter1 = None
+        presenter2 = None
+
+        for pres in potential_presenters:
+            if is_actor(pres):
+                if not presenter1:
+                    presenter1 = pres
+                elif not presenter2:
+                    presenter2 = pres
+                else:
+                    if potential_presenters[pres] > potential_presenters[presenter1] or potential_presenters[pres] > potential_presenters[presenter2]:
+                        if potential_presenters[presenter1] < potential_presenters[presenter2]:
+                            presenter1 = presenter2
+                        presenter2 = pres
+        if not presenter1 or not presenter2:
+            #print("not enough matches for",award)
+            presenters[award] = []
+            continue
+        presenters[award] = [presenter1,presenter2]
+        # try:
+        #     presenter1 = max(potential_presenters) 
+        #     potential_presenters.pop(presenter1)
+        #     presenter2 = max(potential_presenters)
+        #     presenters[award] = [presenter1,presenter2]
+        # except:
+        #     print("no one matched for",award)
         
         
 
@@ -428,13 +446,13 @@ def get_presenters(year):
     final_presenters = presenters
     return presenters
 
-def pre_ceremony():
+def pre_ceremony(year):
     '''This function loads/fetches/processes any data your program
     will use, and stores that data in your DB or in a json, csv, or
     plain text file. It is the first thing the TA will run when grading.
     Do NOT change the name of this function or what it returns.'''
     # Your code here
-    f = open('gg2013.json')
+    f = open('gg' + year + '.json')
     global data
     global split_tweets
     global lower_tweets
@@ -450,21 +468,22 @@ def pre_ceremony():
     print("Pre-ceremony processing complete.")
     return
 
-def main():
+def main(year):
     '''This function calls your program. Typing "python gg_api.py"
     will run this function. Or, in the interpreter, import gg_api
     and then run gg_api.main(). This is the second thing the TA will
     run when grading. Do NOT change the name of this function or
     what it returns.'''
     # Your code here
-    pre_ceremony()
-    # # get award and nominees within GoldenGlobes object
-    global gg
-    awards = get_awards(2013)
-    nominees = get_nominees(2013)
-    presenters = get_presenters(2013)
-    hosts = get_hosts(2013)
-    winners = get_winners(2013)
+    pre_ceremony(year)
+
+    awards = get_awards(year)
+    print(awards)
+    print(len(awards))
+    nominees = get_nominees(year)
+    presenters = get_presenters(year)
+    hosts = get_hosts(year)
+    winners = get_winner(year)
 
     convert_to_json(awards, nominees, presenters, hosts, winners)
 
@@ -483,10 +502,13 @@ def convert_to_json(awards, nominees, presenters, hosts, winners):
         data[award] = sub
     dict["award_data"] = data
 
-    json_object = json.dumps(dictionary, indent=4)
+    json_object = json.dumps(dict, indent=4)
 
     with open("final.json", "w") as outfile:
         outfile.write(json_object)
 
 if __name__ == '__main__':
-    main()
+    if len(sys.argv) > 1:
+        main(str(sys.argv[1]))
+    else:
+        main('2013')
