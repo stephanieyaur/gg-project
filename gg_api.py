@@ -517,6 +517,7 @@ def main():
 def convert_to_json(awards, nominees, presenters, hosts, winners):
     dict = {}
     dict["hosts"] = hosts
+
     data = {}
     for award in OFFICIAL_AWARDS_1315:
         sub = {}
