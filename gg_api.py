@@ -24,6 +24,7 @@ import pymongo
 from nltk import ne_chunk, pos_tag, word_tokenize, sentiment
 from nltk.tree import Tree
 from collections import defaultdict
+from heapq import nlargest
 
 OFFICIAL_AWARDS_1315 = ['cecil b. demille award', 'best motion picture - drama', 'best performance by an actress in a motion picture - drama', 'best performance by an actor in a motion picture - drama', 'best motion picture - comedy or musical', 'best performance by an actress in a motion picture - comedy or musical', 'best performance by an actor in a motion picture - comedy or musical', 'best animated feature film', 'best foreign language film', 'best performance by an actress in a supporting role in a motion picture', 'best performance by an actor in a supporting role in a motion picture', 'best director - motion picture', 'best screenplay - motion picture', 'best original score - motion picture', 'best original song - motion picture', 'best television series - drama', 'best performance by an actress in a television series - drama', 'best performance by an actor in a television series - drama', 'best television series - comedy or musical', 'best performance by an actress in a television series - comedy or musical', 'best performance by an actor in a television series - comedy or musical', 'best mini-series or motion picture made for television', 'best performance by an actress in a mini-series or motion picture made for television', 'best performance by an actor in a mini-series or motion picture made for television', 'best performance by an actress in a supporting role in a series, mini-series or motion picture made for television', 'best performance by an actor in a supporting role in a series, mini-series or motion picture made for television']
 OFFICIAL_AWARDS_1819 = ['best motion picture - drama', 'best motion picture - musical or comedy', 'best performance by an actress in a motion picture - drama', 'best performance by an actor in a motion picture - drama', 'best performance by an actress in a motion picture - musical or comedy', 'best performance by an actor in a motion picture - musical or comedy', 'best performance by an actress in a supporting role in any motion picture', 'best performance by an actor in a supporting role in any motion picture', 'best director - motion picture', 'best screenplay - motion picture', 'best motion picture - animated', 'best motion picture - foreign language', 'best original score - motion picture', 'best original song - motion picture', 'best television series - drama', 'best television series - musical or comedy', 'best television limited series or motion picture made for television', 'best performance by an actress in a limited series or a motion picture made for television', 'best performance by an actor in a limited series or a motion picture made for television', 'best performance by an actress in a television series - drama', 'best performance by an actor in a television series - drama', 'best performance by an actress in a television series - musical or comedy', 'best performance by an actor in a television series - musical or comedy', 'best performance by an actress in a supporting role in a series, limited series or motion picture made for television', 'best performance by an actor in a supporting role in a series, limited series or motion picture made for television', 'cecil b. demille award']
@@ -32,6 +33,7 @@ OFFICIAL_AWARDS_1819 = ['best motion picture - drama', 'best motion picture - mu
 data = None
 lower_tweets = None
 split_tweets = None
+final_presenters = {"best screenplay - motion picture": ["robert pattinson", "amanda seyfried"]}
 gg = GoldenGlobe()
 
 
@@ -47,6 +49,12 @@ def is_actor(input):
     # result2 = list(collection.find({"primaryName": {"$in": ["not an actor"]}})) # change to primary name
     return len(result) > 0
 
+def regex_award(award):
+    # first two words like best performance
+    # actor actress
+    # if television, search television or tv
+    # - comedy or musical searches for both
+    print("working on it")
 
 
 def get_hosts(year):
@@ -142,31 +150,75 @@ def get_nominees(year):
     names as keys, and each entry a list of strings. Do NOT change
     the name of this function or what it returns.'''
     # Your code here
+    nominees = populate_awards() # dictionary of award names as key and list of nominees as value
+    for award in nominees:
+        isPerson = re.search(r"\bactor\b|\bactress\b", award) != None
+        potential_nominees = defaultdict(int)
+        award_short = ' '.join(award.split(' ')[0:2])
+        # if television, search for tv or television
+        # if " - ", split, search second part
+        #     if or in second part, search each one and combined
+        # if " in a " split and search
+        potential_tweets = {}
 
-    """
-    for all tweets:
-        split tweet
-        if "nominated" or "nominee" in split_tweet:
-        find actor name
-        find award name
-
-        add actor name to Award.nominees
+        for i in range(len(data)):
+            tweet = data[i]
+            lower_tweet = lower_tweets[i]
+            nomSearch = re.search(r"\bnomin",lower_tweet)
+            if (nomSearch) and re.search(award_short,lower_tweet):
+                print(tweet)
+                # look for actors using NLTK
+                if isPerson:
+                    nltk_results = ne_chunk(pos_tag(word_tokenize(tweet)))
+                    for nltk_result in nltk_results:
+                        if type(nltk_result) == Tree:
+                            name = ''
+                            for nltk_result_leaf in nltk_result.leaves():
+                                name += nltk_result_leaf[0] + ' '
+                            if nltk_result.label() == "PERSON" and not re.search("[Bb]est",name) and is_actor(name) and name not in final_presenters[award]:
+                                print(name, " is a potential nominee")
+                                potential_nominees[name] += 1
+                                potential_tweets[tweet] = name
+                # look for movies using similar strategy to get_awards
+                else:
+                    # strategy 1: +2 for anything inside quotes
+                    try:
+                        match1 = re.search(r'"(.*?)"', tweet).group().strip(punctuation)
+                        if match1 not in final_presenters[award]:
+                            potential_nominees[match1] += 2
+                            potential_tweets[tweet] = match1
+                    except:
+                    # strategy 2: get all capitalized things from sentence AFTER the word "for"
+                        split_tweet_upper = data[i].split()
+                        split_tweet = split_tweets[i]
+                        try:
+                            for_index = split_tweet.index("for")
+                            foundCapital = False
+                            endIndex = None
+                            for i in range(for_index+1, len(split_tweet)):
+                                if foundCapital and not split_tweet_upper[i][0].isupper():
+                                    break
+                                if split_tweet_upper[i][0].isupper():
+                                    if foundCapital == False and type(foundCapital) != int:
+                                        foundCapital = i
+                                        endIndex = i
+                                    else:
+                                        endIndex = i
+                            if endIndex:
+                                delimiter = " "
+                                name = (delimiter.join(split_tweet_upper[foundCapital: endIndex+1]).strip(punctuation))
+                                if name not in final_presenters[award]:
+                                    potential_nominees[name] += 1
+                                    potential_tweets[tweet] = name
+                        except:
+                            continue
+        # get top 4 nominees
+        top_nominees = res = nlargest(4, potential_nominees, key = potential_nominees.get)
+        nominees[award] = top_nominees
+        print(award, " nominees are ",nominees[award])
 
     return nominees
-    """
-    for tweet in data:
-        nltk_results = ne_chunk(pos_tag(word_tokenize(tweet)))
-        for nltk_result in nltk_results:
-            if type(nltk_result) == Tree:
-                name = ''
-                for nltk_result_leaf in nltk_result.leaves():
-                    name += nltk_result_leaf[0] + ' '
-                if nltk_result.label() == "PERSON":
-                    # print('Type: ', nltk_result.label(), 'Name: ', name)
-                    # check if they are an actor
-                    if is_actor(name):
-                        # add to list of nominees
-                        print("is actor")
+
 
 def get_winner(year):
     '''Winners is a dictionary with the hard coded award
@@ -380,6 +432,7 @@ def get_presenters(year):
 
 
     print(presenters)
+    final_presenters = presenters
     return presenters
 
 def pre_ceremony():
@@ -394,8 +447,8 @@ def pre_ceremony():
     global lower_tweets
     loaded_data = json.load(f)
     data = [None for i in range(len(loaded_data))]
-    lower_tweets = [None for i in range(len(loaded_data))]
-    split_tweets = [None for i in range(len(loaded_data))]
+    lower_tweets = [None for i in range(len(loaded_data))] # all tweets saved in lowercase form
+    split_tweets = [None for i in range(len(loaded_data))] # each tweet split by space
     # Clean each tweet so only keep the "data" field and make it all lowercase
     for i in range(len(loaded_data)):
         data[i] = loaded_data[i]["text"]
@@ -423,8 +476,9 @@ def main():
     # get_hosts(2013)
     # time2 = time.time()
     # print("get_hosts using nltk elapsed time: " + str(time2-time1))
-    is_actor("jennifer lawrence")
-    get_presenters(2013)
+    # is_actor("jennifer lawrence")
+    # get_presenters(2013)
+    get_nominees(2013)
     return
 
 if __name__ == '__main__':
