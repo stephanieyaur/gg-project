@@ -20,7 +20,12 @@ We created a MongoDb Database to store and access the imdb dataset of actors.
    ```sh
     py actors_upload_mongodb.py
    ```
+   
+
+## Strategy
+1. ```sh
+    pre_ceremony
+   ```
+   
 
 ## Helpful resources
-1. Spacy
-   - https://unbiased-coder.com/extract-names-python-spacy/
