@@ -1,22 +1,15 @@
 import json
 import re
 from gender_detector.gender_detector import GenderDetector
-from fuzzywuzzy import fuzz
 from imdb import IMDb
 import nltk
 import pymongo
 nltk.download('words')
-from nltk.corpus import words
-from nltk.corpus import stopwords
-from PyDictionary import PyDictionary
-import copy
 from preliminary_helpers import categorize_tweets
 from nltk import ne_chunk, pos_tag, word_tokenize, sentiment
 from nltk.tree import Tree
-from collections import defaultdict
 from heapq import nlargest
 from string import punctuation
-from heapq import nlargest
 
 categorized_tweet_dict = categorize_tweets(2013)
 OFFICIAL_AWARDS_1315 = ['cecil b. demille award', 'best motion picture - drama', 'best performance by an actress in a motion picture - drama', 'best performance by an actor in a motion picture - drama', 'best motion picture - comedy or musical', 'best performance by an actress in a motion picture - comedy or musical', 'best performance by an actor in a motion picture - comedy or musical', 'best animated feature film', 'best foreign language film', 'best performance by an actress in a supporting role in a motion picture', 'best performance by an actor in a supporting role in a motion picture', 'best director - motion picture', 'best screenplay - motion picture', 'best original score - motion picture', 'best original song - motion picture', 'best television series - drama', 'best performance by an actress in a television series - drama', 'best performance by an actor in a television series - drama', 'best television series - comedy or musical', 'best performance by an actress in a television series - comedy or musical', 'best performance by an actor in a television series - comedy or musical', 'best mini-series or motion picture made for television', 'best performance by an actress in a mini-series or motion picture made for television', 'best performance by an actor in a mini-series or motion picture made for television', 'best performance by an actress in a supporting role in a series, mini-series or motion picture made for television', 'best performance by an actor in a supporting role in a series, mini-series or motion picture made for television']
@@ -118,7 +111,7 @@ def get_nominees(year):
                         potential_nominees[match1] += 2
                     except:
                     # strategy 2: get all capitalized groups
-                            stop_words = ["golden", "globes", "goldenglobes"]
+                            stop_words = ["rt" , "@" "golden", "globes", "goldenglobe", "goldenglobes", "best", "demille", "comedy", "musical", "tv", "television", "drama", "motion picture", "award", "congrat",]
                             foundCapital = False
                             start_index = 0
                             end_index = None
@@ -138,12 +131,13 @@ def get_nominees(year):
                                         delimiter = " "
                                         name = delimiter.join(split_tweet[start_index: end_index+1]).strip(punctuation)
                                         name = name.lower().rstrip()
-                                        if not any([x in name for x in stop_words]) and name not in potential_nominees:
-                                            potential_nominees[name] += 1
+                                        if not any([x in name for x in stop_words]) and name != "i" and name != "golden globe" and name != "we" and name != "and" and name != "the" and name != "so":
+                                            if name not in potential_nominees:
+                                                potential_nominees[name] = 1
+                                            else:
+                                                potential_nominees[name] += 1
 
 
-
-    for award in award_list_not_person:
         # get top 4 nominees
         top_nominees = nlargest(4, potential_nominees, key = potential_nominees.get)
         nominees[award] = top_nominees
